@@ -59,13 +59,33 @@ ParseNoteLM은 대학생과 대학원생을 위한 AI 기반 문서 분석 서�
 - **질의응답 API** - RAG 기반 컨텍스트 활용 답변 생성
 - **완전한 OpenAI API 통합** - 모든 AI 기능 정상 작동
 
+### Task 6: RAG 시스템 (완료)
+- **문서 청킹 시스템** - 의미적 단위로 문서 분할 (512자 청크, 50자 겹침)
+- **벡터 검색 엔진** - OpenAI 임베딩 + FAISS 기반 유사도 검색
+- **RAG 파이프라인** - 검색-증강-생성 전체 프로세스 구현
+- **컨텍스트 기반 답변** - GPT-3.5-turbo 활용 정확한 답변 생성
+- **소스 추적 시스템** - 답변의 근거 문서 및 위치 제공
+- **채팅 기록 관리** - 대화 히스토리 저장 및 조회
+- **피드백 시스템** - 답변 품질 개선을 위한 사용자 피드백
+
+### Task 7: 프로젝트 멤버 관리 (완료)
+- **역할 기반 권한 시스템** - OWNER, ADMIN, EDITOR, VIEWER 4단계 권한
+- **멤버 초대 시스템** - 이메일 기반 프로젝트 멤버 초대
+- **권한 관리** - 역할별 세분화된 접근 제어
+  - OWNER: 모든 권한 (프로젝트 관리, 멤버 관리, 문서 편집)
+  - ADMIN: 멤버 관리, 문서 편집
+  - EDITOR: 문서 편집
+  - VIEWER: 문서 조회만 가능
+- **멤버 관리 API** - 초대, 조회, 업데이트, 제거 기능
+- **통계 시스템** - 프로젝트별 멤버 통계 및 역할 분포
+- **소프트 삭제** - 멤버 제거 후 재초대 가능
+
 ### 향후 구현 예정
-- RAG 시스템 고도화 (Task 6)
-- 프로젝트 관리 (Task 7)
-- React 프론트엔드 (Task 8-9)
-- 사용량 추적 및 제한 (Task 10)
-- 성능 최적화 (Task 11) 
-- 로깅 및 모니터링 (Task 12)
+- 프로젝트 대시보드 및 관리 UI (Task 8)
+- React 프론트엔드 (Task 9-10)
+- 사용량 추적 및 제한 (Task 11)
+- 성능 최적화 (Task 12) 
+- 로깅 및 모니터링 (Task 13)
 
 ## 서비스 제한사항
 
@@ -231,60 +251,51 @@ curl -X POST "http://localhost:8000/api/openai/answer" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "question": "FastAPI의 주요 특징은 무엇인가요?",
-    "context": "FastAPI는 Python으로 빠르게 API를 개발할 수 있는 웹 프레임워크입니다."
+    "question": "인공지능이 무엇인가요?",
+    "context": "인공지능은 머신러닝과 딥러닝 기술을 통해 인간의 지능을 모방하는 기술입니다."
   }'
 ```
 
-## 프로젝트 구조
+### 프로젝트 멤버 관리 API
 
-```
-ParseNoteLM/
-├── backend/
-│   ├── app/
-│   │   ├── core/             # 핵심 설정
-│   │   │   ├── config.py     # 앱 설정
-│   │   │   ├── database.py   # DB 연결
-│   │   │   └── security.py   # JWT, 권한 관리
-│   │   ├── models/           # 데이터베이스 모델
-│   │   │   ├── user.py       # 사용자 모델
-│   │   │   ├── project.py    # 프로젝트 모델
-│   │   │   ├── document.py   # 문서 모델
-│   │   │   ├── embedding.py  # 임베딩 모델
-│   │   │   └── chat_history.py # 채팅 기록 모델
-│   │   ├── routes/           # API 라우터
-│   │   │   ├── auth.py       # 인증 API
-│   │   │   ├── admin.py      # 관리자 API
-│   │   │   ├── projects.py   # 프로젝트 API
-│   │   │   ├── documents.py  # 문서 API
-│   │   │   └── openai.py     # OpenAI API
-│   │   ├── schemas/          # Pydantic 스키마
-│   │   │   ├── user.py       # 사용자 스키마
-│   │   │   ├── project.py    # 프로젝트 스키마
-│   │   │   ├── document.py   # 문서 스키마
-│   │   │   ├── embedding.py  # 임베딩 스키마
-│   │   │   └── chat_history.py # 채팅 스키마
-│   │   ├── services/         # 비즈니스 로직
-│   │   │   └── user_service.py
-│   │   └── utils/            # 유틸리티
-│   │       └── file_validator.py # 파일 검증
-│   ├── uploads/              # 업로드된 파일 저장소
-│   ├── init_db.py            # DB 초기화 스크립트
-│   ├── main.py               # FastAPI 앱 진입점
-│   └── requirements.txt      # Python 의존성
-├── frontend/                 # 프론트엔드 (향후 구현)
-├── tasks/                    # 개발 태스크 관리
-├── PRD.md                    # 제품 요구사항 문서
-└── README.md
+#### 멤버 초대
+```bash
+curl -X POST "http://localhost:8000/api/projects/{project_id}/members" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "member@example.com",
+    "role": "editor"
+  }'
 ```
 
-## 보안 기능
+#### 멤버 목록 조회
+```bash
+curl -X GET "http://localhost:8000/api/projects/{project_id}/members" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
 
-- JWT 토큰 인증 - 안전한 stateless 인증
-- BCrypt 비밀번호 해싱 - 단방향 암호화
-- 역할 기반 접근 제어 - USER, PREMIUM, ADMIN 권한
-- 로그인 시도 제한 - 무차별 대입 공격 방어
-- 비밀번호 재설정 - 안전한 토큰 기반 재설정
+#### 멤버 역할 업데이트
+```bash
+curl -X PUT "http://localhost:8000/api/projects/{project_id}/members/{member_id}" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role": "admin"
+  }'
+```
+
+#### 멤버 통계 조회
+```bash
+curl -X GET "http://localhost:8000/api/projects/{project_id}/members/stats" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### 멤버 제거
+```bash
+curl -X DELETE "http://localhost:8000/api/projects/{project_id}/members/{member_id}" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
 
 ## 테스트
 
@@ -301,6 +312,21 @@ python test_openai_integration.py
 # 텍스트 요약 (45% 압축률)
 # 임베딩 생성 (1536차원)
 # RAG 기반 질의응답
+```
+
+### 프로젝트 멤버 관리 테스트
+```bash
+# 프로젝트 멤버 관리 기능 테스트 실행
+cd backend
+python test_project_members.py
+
+# 테스트 결과: 6/6 성공
+# 사용자 등록 (3명: 소유자, 편집자, 뷰어)
+# 프로젝트 생성 및 소유자 로그인
+# 멤버 초대 (editor, viewer 역할)
+# 멤버 목록 조회 (총 3명)
+# 멤버 통계 조회 (소유자 1명, 편집자 1명, 뷰어 1명)
+# 역할 기반 권한 시스템 검증
 ```
 
 ### API 테스트

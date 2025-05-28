@@ -381,7 +381,7 @@
       "id": 5,
       "title": "OpenAI API 통합 구현",
       "description": "문서 분석 및 임베딩 생성을 위해 OpenAI의 GPT-3.5-turbo 및 text-embedding-3-small 모델을 통합합니다.",
-      "status": "in-progress",
+      "status": "done",
       "dependencies": [
         4
       ],
@@ -395,7 +395,7 @@
           "description": "OpenAI API 키를 안전하게 저장하고 인증 메커니즘 구현",
           "dependencies": [],
           "details": "환경 변수 사용, 키 암호화, 안전한 저장소 구현",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 2,
@@ -405,7 +405,7 @@
             1
           ],
           "details": "요청 파라미터, 헤더, 본문 구조화, 에러 처리 로직 포함",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 3,
@@ -415,7 +415,7 @@
             2
           ],
           "details": "JSON 파싱, 에러 핸들링, 응답 데이터 구조화",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 4,
@@ -426,7 +426,7 @@
             3
           ],
           "details": "Promise 또는 async/await 사용, 타임아웃 처리",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 5,
@@ -436,7 +436,7 @@
             4
           ],
           "details": "에러 타입 정의, 로그 레벨 설정, 모니터링 통합",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 6,
@@ -447,7 +447,7 @@
             5
           ],
           "details": "캐싱 구현, 병렬 처리, 연결 풀링 최적화",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 7,
@@ -457,7 +457,7 @@
             6
           ],
           "details": "테스트 케이스 작성, API 사용 가이드 문서화, 예제 코드 제공",
-          "status": "pending"
+          "status": "done"
         }
       ]
     },
@@ -465,7 +465,7 @@
       "id": 6,
       "title": "RAG(검색 증강 생성) 시스템 구현",
       "description": "업로드된 문서를 사용하여 컨텍스트 기반 질문 답변을 위한 RAG 시스템을 개발합니다.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         3,
         5
@@ -480,7 +480,7 @@
           "description": "문서 검색을 위한 Retriever 컴포넌트의 상세 설계 및 구현 계획 수립",
           "dependencies": [],
           "details": "벡터 데이터베이스 선택, 임베딩 모델 결정, 검색 알고리즘 설계, 성능 최적화 방안 포함",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 2,
@@ -488,7 +488,7 @@
           "description": "응답 생성을 위한 Generator 컴포넌트의 상세 설계 및 구현 계획 수립",
           "dependencies": [],
           "details": "언어 모델 선택, 프롬프트 엔지니어링 전략, 출력 제어 메커니즘 설계",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 3,
@@ -498,7 +498,7 @@
             1
           ],
           "details": "데이터 수집 방법, 전처리 파이프라인, 인덱싱 전략, 업데이트 메커니즘 설계",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 4,
@@ -509,7 +509,7 @@
             2
           ],
           "details": "쿼리 분석, 의도 파악, 컨텍스트 추출, Retriever와 Generator 연동 방식 설계",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 5,
@@ -522,7 +522,7 @@
             4
           ],
           "details": "마이크로서비스 구조 설계, API 설계, 데이터 흐름 정의, 확장성 고려",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 6,
@@ -532,7 +532,7 @@
             5
           ],
           "details": "캐싱 전략, 병렬 처리 방안, 성능 지표 정의, 로깅 및 모니터링 도구 선정",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 7,
@@ -543,7 +543,7 @@
             6
           ],
           "details": "단위 테스트, 통합 테스트, 성능 테스트 계획, 평가 메트릭 정의, 사용자 피드백 수집 방법",
-          "status": "pending"
+          "status": "done"
         }
       ]
     },
@@ -551,7 +551,7 @@
       "id": 7,
       "title": "프로젝트 관리 기능 개발",
       "description": "프로젝트 생성, 관리 및 전환 기능을 구현합니다.",
-      "status": "pending",
+      "status": "in-progress",
       "dependencies": [
         2,
         3
@@ -566,7 +566,7 @@
           "description": "사용자가 새 프로젝트를 생성할 수 있는 기능을 개발합니다.",
           "dependencies": [],
           "details": "프로젝트 이름, 설명, 시작일, 종료일 등의 기본 정보를 입력받는 폼을 구현합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 2,
@@ -576,7 +576,7 @@
             1
           ],
           "details": "프로젝트 목록 페이지와 각 프로젝트의 상세 정보 페이지를 구현합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 3,
@@ -587,7 +587,7 @@
             2
           ],
           "details": "프로젝트 정보 수정 폼을 구현하고, 변경사항을 저장하는 로직을 개발합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 4,
@@ -598,7 +598,7 @@
             2
           ],
           "details": "프로젝트 삭제 확인 절차를 구현하고, 관련 데이터를 안전하게 제거하는 로직을 개발합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 5,
@@ -621,7 +621,7 @@
             3
           ],
           "details": "진행률 표시, 마일스톤 관리, 간트 차트 등의 기능을 구현합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 7,
@@ -633,7 +633,7 @@
             6
           ],
           "details": "프로젝트 데이터를 분석하고 요약하여 PDF 또는 Excel 형식의 보고서를 생성하는 기능을 구현합니다.",
-          "status": "pending"
+          "status": "done"
         }
       ]
     },

@@ -1,6 +1,6 @@
 # Task ID: 7
 # Title: 프로젝트 관리 기능 개발
-# Status: pending
+# Status: in-progress
 # Dependencies: 2, 3
 # Priority: medium
 # Description: 프로젝트 생성, 관리 및 전환 기능을 구현합니다.
@@ -21,25 +21,25 @@
 5. 프로젝트 전환 기능 테스트
 
 # Subtasks:
-## 1. 프로젝트 생성 기능 구현 [pending]
+## 1. 프로젝트 생성 기능 구현 [done]
 ### Dependencies: None
 ### Description: 사용자가 새 프로젝트를 생성할 수 있는 기능을 개발합니다.
 ### Details:
 프로젝트 이름, 설명, 시작일, 종료일 등의 기본 정보를 입력받는 폼을 구현합니다.
 
-## 2. 프로젝트 조회 기능 구현 [pending]
+## 2. 프로젝트 조회 기능 구현 [done]
 ### Dependencies: 7.1
 ### Description: 사용자가 생성된 프로젝트 목록을 조회하고 상세 정보를 볼 수 있는 기능을 개발합니다.
 ### Details:
 프로젝트 목록 페이지와 각 프로젝트의 상세 정보 페이지를 구현합니다.
 
-## 3. 프로젝트 수정 기능 구현 [pending]
+## 3. 프로젝트 수정 기능 구현 [done]
 ### Dependencies: 7.1, 7.2
 ### Description: 사용자가 기존 프로젝트의 정보를 수정할 수 있는 기능을 개발합니다.
 ### Details:
 프로젝트 정보 수정 폼을 구현하고, 변경사항을 저장하는 로직을 개발합니다.
 
-## 4. 프로젝트 삭제 기능 구현 [pending]
+## 4. 프로젝트 삭제 기능 구현 [done]
 ### Dependencies: 7.1, 7.2
 ### Description: 사용자가 프로젝트를 삭제할 수 있는 기능을 개발합니다.
 ### Details:
@@ -51,13 +51,13 @@
 ### Details:
 멤버 초대, 역할 할당, 멤버 제거 등의 기능을 구현합니다.
 
-## 6. 프로젝트 진행 상황 추적 기능 구현 [pending]
+## 6. 프로젝트 진행 상황 추적 기능 구현 [done]
 ### Dependencies: 7.1, 7.2, 7.3
 ### Description: 프로젝트의 진행 상황을 시각적으로 표시하고 업데이트할 수 있는 기능을 개발합니다.
 ### Details:
 진행률 표시, 마일스톤 관리, 간트 차트 등의 기능을 구현합니다.
 
-## 7. 프로젝트 보고서 생성 기능 구현 [pending]
+## 7. 프로젝트 보고서 생성 기능 구현 [done]
 ### Dependencies: 7.1, 7.2, 7.6
 ### Description: 프로젝트의 현재 상태와 진행 상황을 요약한 보고서를 생성하는 기능을 개발합니다.
 ### Details:

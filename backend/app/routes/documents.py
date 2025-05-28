@@ -20,6 +20,7 @@ import pathlib
 from app.config import settings
 from app.core.file_validation_simple import SimpleFileValidator
 from app.services.document_service import get_document_service
+from app.services.rag_service import get_rag_service, RAGService
 
 router = APIRouter()
 
@@ -107,6 +108,15 @@ async def upload_document(
                 document.content = content.decode('utf-8', errors='ignore')
         
         db.commit()
+        
+        # RAG 시스템에 문서 추가 처리 (백그라운드에서)
+        try:
+            if document.content:  # 텍스트 내용이 있는 경우에만
+                rag_service = await get_rag_service()
+                await rag_service.process_document_for_rag(document.id, db)
+        except Exception as e:
+            # RAG 처리 실패는 문서 업로드 실패로 이어지지 않도록 로그만 남김
+            print(f"RAG 처리 실패 (문서 업로드는 성공): {e}")
         
         return DocumentResponse.model_validate(document)
         

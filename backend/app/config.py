@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # 데이터베이스 설정
-    DATABASE_URL: str = "sqlite:///./parse_note_lm.db"
+    DATABASE_URL: str = "sqlite:///./parsenotelm.db"
     
     # 파일 업로드 설정
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB

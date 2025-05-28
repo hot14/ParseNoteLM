@@ -30,6 +30,7 @@ class User(Base):
     
     # 관계 설정
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
+    project_memberships = relationship("ProjectMember", foreign_keys="ProjectMember.user_id", back_populates="user")
     
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, username={self.username}, role={self.role})>"

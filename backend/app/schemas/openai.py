@@ -39,6 +39,10 @@ class SummaryRequest(BaseModel):
     text: str = Field(..., description="요약할 텍스트", min_length=1, max_length=15000)
     max_length: Optional[int] = Field(200, description="최대 요약 길이", ge=50, le=500)
 
+class ChatRequest(BaseModel):
+    """채팅 요청 스키마"""
+    message: str = Field(..., description="사용자 메시지", min_length=1, max_length=2000)
+
 class SummaryResponse(BaseModel):
     """텍스트 요약 응답 스키마"""
     summary: str = Field(..., description="생성된 요약")
@@ -54,6 +58,13 @@ class QuestionAnswerResponse(BaseModel):
     """질의응답 응답 스키마"""
     answer: str = Field(..., description="생성된 답변")
     context_used: bool = Field(..., description="컨텍스트 사용 여부")
+
+class ChatResponse(BaseModel):
+    """채팅 응답 스키마"""
+    message: str = Field(..., description="응답 메시지")
+    tokens_used: int = Field(..., description="사용된 토큰 수")
+    sources: Optional[List[str]] = Field(default=[], description="참조된 문서 ID 목록")
+    context_used: Optional[int] = Field(default=0, description="사용된 컨텍스트 청크 수")
 
 class OpenAIUsageStats(BaseModel):
     """OpenAI 사용 통계 스키마"""
