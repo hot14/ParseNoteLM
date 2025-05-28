@@ -1,6 +1,6 @@
 # Task ID: 8
 # Title: 기본 UI 설계 및 구현
-# Status: pending
+# Status: in-progress
 # Dependencies: 2, 4, 6, 7
 # Priority: medium
 # Description: 문서 업로드, 프로젝트 관리 및 채팅 상호작용을 위한 기본 사용자 인터페이스를 만듭니다.
