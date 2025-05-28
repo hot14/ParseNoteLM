@@ -13,12 +13,12 @@ export interface Project {
 }
 
 export interface CreateProjectRequest {
-  name: string;
+  title: string;
   description?: string;
 }
 
 export interface UpdateProjectRequest {
-  name?: string;
+  title?: string;
   description?: string;
 }
 

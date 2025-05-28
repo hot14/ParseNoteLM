@@ -5,6 +5,7 @@
 # 기본 모델들
 from .user import User, UserRole
 from .project import Project
+from .project_member import ProjectMember, MemberRole
 from .document import Document, DocumentType, ProcessingStatus
 from .embedding import Embedding
 from .chat_history import ChatHistory, MessageRole, MessageType
@@ -17,6 +18,8 @@ __all__ = [
     
     # Project 관련
     "Project",
+    "ProjectMember",
+    "MemberRole",
     
     # Document 관련
     "Document",

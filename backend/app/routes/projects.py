@@ -93,11 +93,15 @@ def get_projects(
     total = query.count()
     projects = query.order_by(Project.created_at.desc()).offset(skip).limit(limit).all()
     
+    # 사용자가 더 많은 프로젝트를 생성할 수 있는지 확인
+    can_create_more = total < settings.MAX_PROJECTS_PER_USER
+    
     return ProjectListResponse(
         projects=[ProjectResponse.model_validate(project) for project in projects],
         total=total,
         skip=skip,
-        limit=limit
+        limit=limit,
+        can_create_more=can_create_more
     )
 
 
