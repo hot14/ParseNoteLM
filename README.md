@@ -33,8 +33,21 @@ ParseNoteLM은 대학생과 대학원생을 위한 AI 기반 문서 분석 서�
 - 로그인 시도 제한 - 보안을 위한 Rate Limiting
 - 관리자 기능 - 사용자 관리 및 시스템 통계
 
+### Task 3: 데이터베이스 스키마 (완료)
+- 완전한 데이터 모델 설계 - User, Project, Document, Embedding, ChatHistory
+- 관계형 데이터베이스 설계 - 외래키 관계 및 데이터 무결성
+- Pydantic 스키마 - API 요청/응답 검증 및 직렬화
+- 소프트 삭제 지원 - 데이터 복구 가능한 삭제 시스템
+
+### Task 4: 문서 업로드 및 처리 (완료)
+- 파일 업로드 시스템 - PDF, TXT 파일 업로드 지원
+- 파일 검증 - 10MB 크기 제한, 허용된 파일 형식 검증
+- 사용자별/프로젝트별 파일 저장 - 체계적인 디렉토리 구조
+- TXT 파일 내용 추출 - 업로드 즉시 텍스트 내용 추출
+- 문서 CRUD API - 생성, 조회, 삭제, 재처리 기능
+- 프로젝트당 5개 문서 제한 - 비즈니스 룰 적용
+
 ### 향후 구현 예정
-- 문서 업로드 및 처리 (Task 4)
 - AI 문서 분석 (Task 5)
 - RAG 기반 질의응답 (Task 6)
 - 프로젝트 관리 (Task 7)
@@ -45,7 +58,7 @@ ParseNoteLM은 대학생과 대학원생을 위한 AI 기반 문서 분석 서�
 - 사용자당 최대 3개 프로젝트
 - 프로젝트당 최대 5개 문서
 - 파일 크기 제한: 10MB
-- 지원 파일 형식: PDF, TXT (향후 구현)
+- 지원 파일 형식: PDF, TXT (현재 TXT만 완전 지원)
 
 ## 설치 및 설정
 
@@ -135,6 +148,36 @@ curl -X GET "http://localhost:8000/api/admin/users" \
   -H "Authorization: Bearer ADMIN_JWT_TOKEN"
 ```
 
+### 프로젝트 생성
+```bash
+curl -X POST "http://localhost:8000/api/projects" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "내 프로젝트",
+    "description": "프로젝트 설명"
+  }'
+```
+
+### 문서 업로드
+```bash
+curl -X POST "http://localhost:8000/api/projects/{project_id}/documents/upload" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "file=@example.txt"
+```
+
+### 프로젝트 문서 목록 조회
+```bash
+curl -X GET "http://localhost:8000/api/projects/{project_id}/documents" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### 문서 삭제
+```bash
+curl -X DELETE "http://localhost:8000/api/documents/{document_id}" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
 ## 프로젝트 구조
 
 ```
@@ -146,14 +189,27 @@ ParseNoteLM/
 │   │   │   ├── database.py   # DB 연결
 │   │   │   └── security.py   # JWT, 권한 관리
 │   │   ├── models/           # 데이터베이스 모델
-│   │   │   └── user.py       # 사용자 모델
+│   │   │   ├── user.py       # 사용자 모델
+│   │   │   ├── project.py    # 프로젝트 모델
+│   │   │   ├── document.py   # 문서 모델
+│   │   │   ├── embedding.py  # 임베딩 모델
+│   │   │   └── chat_history.py # 채팅 기록 모델
 │   │   ├── routes/           # API 라우터
 │   │   │   ├── auth.py       # 인증 API
-│   │   │   └── admin.py      # 관리자 API
+│   │   │   ├── admin.py      # 관리자 API
+│   │   │   ├── projects.py   # 프로젝트 API
+│   │   │   └── documents.py  # 문서 API
 │   │   ├── schemas/          # Pydantic 스키마
-│   │   │   └── user.py       # 사용자 스키마
-│   │   └── services/         # 비즈니스 로직
-│   │       └── user_service.py
+│   │   │   ├── user.py       # 사용자 스키마
+│   │   │   ├── project.py    # 프로젝트 스키마
+│   │   │   ├── document.py   # 문서 스키마
+│   │   │   ├── embedding.py  # 임베딩 스키마
+│   │   │   └── chat_history.py # 채팅 스키마
+│   │   ├── services/         # 비즈니스 로직
+│   │   │   └── user_service.py
+│   │   └── utils/            # 유틸리티
+│   │       └── file_validator.py # 파일 검증
+│   ├── uploads/              # 업로드된 파일 저장소
 │   ├── init_db.py            # DB 초기화 스크립트
 │   ├── main.py               # FastAPI 앱 진입점
 │   └── requirements.txt      # Python 의존성

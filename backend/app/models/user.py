@@ -1,9 +1,11 @@
 """
 사용자 모델
 """
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.core.database import Base
+from app.db.session import Base
 import enum
 
 class UserRole(str, enum.Enum):
@@ -26,5 +28,18 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
+    # 관계 설정
+    projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
+    
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, username={self.username}, role={self.role})>"
+
+    @property
+    def project_count(self):
+        """사용자의 활성 프로젝트 수"""
+        return len([p for p in self.projects if not p.is_deleted])
+
+    @property
+    def can_create_project(self):
+        """새 프로젝트를 생성할 수 있는지 확인 (최대 3개)"""
+        return self.project_count < 3

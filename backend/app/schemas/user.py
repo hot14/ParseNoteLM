@@ -16,6 +16,24 @@ class UserCreate(UserBase):
     password: str
     role: Optional[UserRole] = UserRole.USER
 
+class UserUpdate(BaseModel):
+    """사용자 업데이트 스키마"""
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+class UserProfile(BaseModel):
+    """사용자 프로필 스키마"""
+    id: int
+    email: EmailStr
+    username: str
+    role: UserRole
+    is_active: bool
+    is_verified: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class UserLogin(BaseModel):
     """사용자 로그인 스키마"""
     email: EmailStr
