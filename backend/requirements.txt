@@ -1,0 +1,38 @@
+# FastAPI 백엔드 의존성 패키지
+# ParseNoteLM - AI 기반 문서 분석 및 질의응답 서비스
+
+# 웹 프레임워크
+fastapi==0.95.1
+uvicorn[standard]==0.21.1
+python-multipart==0.0.6
+pydantic-settings==2.0.3
+
+# 보안 및 인증
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# 데이터베이스 관련
+sqlalchemy==2.0.10
+alembic==1.10.3
+
+# SQLite (개발용)
+# 프로덕션에서는 PostgreSQL 사용 권장
+# psycopg2-binary==2.9.6
+# asyncpg==0.27.0
+
+# 유틸리티
+python-dotenv==1.0.0
+httpx==0.24.0
+
+# AI/ML 관련 (향후 추가 예정)
+# openai==0.27.8
+# tiktoken==0.4.0
+# numpy==1.24.3
+# pandas==1.5.3
+
+# 개발/테스트 도구 (선택적)
+# pytest==7.3.1
+# pytest-asyncio==0.21.0
+# black==23.3.0
+# isort==5.12.0
