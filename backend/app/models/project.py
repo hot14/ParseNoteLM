@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, validates
-from app.db.session import Base
+from app.core.database import Base
 
 
 class Project(Base):

@@ -3,7 +3,7 @@ ParseNoteLM 백엔드 서버
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, admin, documents, projects
+from app.routes import auth, admin, documents, projects, openai_api
 
 app = FastAPI(
     title="ParseNoteLM API",
@@ -25,6 +25,7 @@ app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 app.include_router(admin.router, prefix="/api", tags=["admin"])
 app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
+app.include_router(openai_api.router, tags=["openai"])
 
 @app.get("/")
 async def root():

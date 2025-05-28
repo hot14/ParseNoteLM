@@ -15,7 +15,7 @@ ParseNoteLM은 대학생과 대학원생을 위한 AI 기반 문서 분석 서�
 - SQLAlchemy 2.0 - ORM
 - JWT 토큰 - 인증 시스템
 - BCrypt - 비밀번호 해싱
-- OpenAI API - AI 서비스 (향후 구현)
+- OpenAI API - AI 서비스 (✅ 완료)
 
 ### 프론트엔드 (향후 구현)
 - React 18 - UI 라이브러리
@@ -47,11 +47,25 @@ ParseNoteLM은 대학생과 대학원생을 위한 AI 기반 문서 분석 서�
 - 문서 CRUD API - 생성, 조회, 삭제, 재처리 기능
 - 프로젝트당 5개 문서 제한 - 비즈니스 룰 적용
 
+### Task 5: OpenAI API 통합 (완료) 
+- **문서 분석 API** - AI를 통한 자동 문서 분석
+  - 텍스트 요약 - 핵심 내용 자동 추출
+  - 키워드 추출 - 중요 키워드 식별
+  - 카테고리 분류 - 문서 유형 자동 분류
+  - 주제 추출 - 문서 주요 주제 파악
+  - 난이도 평가 - 초급/중급/고급 자동 판별
+- **텍스트 요약 API** - 긴 텍스트의 간결한 요약
+- **임베딩 생성 API** - 1536차원 벡터 임베딩 생성
+- **질의응답 API** - RAG 기반 컨텍스트 활용 답변 생성
+- **완전한 OpenAI API 통합** - 모든 AI 기능 정상 작동
+
 ### 향후 구현 예정
-- AI 문서 분석 (Task 5)
-- RAG 기반 질의응답 (Task 6)
+- RAG 시스템 고도화 (Task 6)
 - 프로젝트 관리 (Task 7)
 - React 프론트엔드 (Task 8-9)
+- 사용량 추적 및 제한 (Task 10)
+- 성능 최적화 (Task 11) 
+- 로깅 및 모니터링 (Task 12)
 
 ## 서비스 제한사항
 
@@ -154,7 +168,7 @@ curl -X POST "http://localhost:8000/api/projects" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "내 프로젝트",
+    "title": "내 프로젝트",
     "description": "프로젝트 설명"
   }'
 ```
@@ -178,6 +192,50 @@ curl -X DELETE "http://localhost:8000/api/documents/{document_id}" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
+### OpenAI API 사용 예제 
+
+#### 문서 분석
+```bash
+curl -X POST "http://localhost:8000/api/openai/analyze" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "인공지능은 머신러닝과 딥러닝 기술을 통해 인간의 지능을 모방하는 기술입니다."
+  }'
+```
+
+#### 텍스트 요약
+```bash
+curl -X POST "http://localhost:8000/api/openai/summary" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "긴 텍스트 내용을 여기에 입력합니다...",
+    "max_length": 100
+  }'
+```
+
+#### 임베딩 생성
+```bash
+curl -X POST "http://localhost:8000/api/openai/embedding" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "임베딩으로 변환할 텍스트"
+  }'
+```
+
+#### 질의응답 (RAG)
+```bash
+curl -X POST "http://localhost:8000/api/openai/answer" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "FastAPI의 주요 특징은 무엇인가요?",
+    "context": "FastAPI는 Python으로 빠르게 API를 개발할 수 있는 웹 프레임워크입니다."
+  }'
+```
+
 ## 프로젝트 구조
 
 ```
@@ -198,7 +256,8 @@ ParseNoteLM/
 │   │   │   ├── auth.py       # 인증 API
 │   │   │   ├── admin.py      # 관리자 API
 │   │   │   ├── projects.py   # 프로젝트 API
-│   │   │   └── documents.py  # 문서 API
+│   │   │   ├── documents.py  # 문서 API
+│   │   │   └── openai.py     # OpenAI API
 │   │   ├── schemas/          # Pydantic 스키마
 │   │   │   ├── user.py       # 사용자 스키마
 │   │   │   ├── project.py    # 프로젝트 스키마
@@ -228,6 +287,21 @@ ParseNoteLM/
 - 비밀번호 재설정 - 안전한 토큰 기반 재설정
 
 ## 테스트
+
+### OpenAI API 통합 테스트 
+```bash
+# 완전한 OpenAI API 통합 테스트 실행
+cd backend
+python test_openai_integration.py
+
+# 테스트 결과: 6/6 성공
+# 사용자 등록/로그인
+# 프로젝트 생성  
+# 문서 분석 (요약, 키워드, 카테고리, 주제, 난이도)
+# 텍스트 요약 (45% 압축률)
+# 임베딩 생성 (1536차원)
+# RAG 기반 질의응답
+```
 
 ### API 테스트
 ```bash

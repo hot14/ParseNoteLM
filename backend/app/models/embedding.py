@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, Float, JSON
 from sqlalchemy.orm import relationship
-from app.db.session import Base
+from app.core.database import Base
 
 
 class Embedding(Base):

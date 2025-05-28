@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 class ProjectBase(BaseModel):
     """프로젝트 기본 스키마"""
-    name: str = Field(..., min_length=1, max_length=255, description="프로젝트 이름")
+    title: str = Field(..., min_length=1, max_length=255, description="프로젝트 제목")
     description: Optional[str] = Field(None, max_length=1000, description="프로젝트 설명")
 
 
@@ -19,7 +19,7 @@ class ProjectCreate(ProjectBase):
 
 class ProjectUpdate(BaseModel):
     """프로젝트 업데이트 스키마"""
-    name: Optional[str] = Field(None, min_length=1, max_length=255, description="프로젝트 이름")
+    title: Optional[str] = Field(None, min_length=1, max_length=255, description="프로젝트 제목")
     description: Optional[str] = Field(None, max_length=1000, description="프로젝트 설명")
 
 

@@ -19,6 +19,7 @@ import os
 import pathlib
 from app.config import settings
 from app.core.file_validation_simple import SimpleFileValidator
+from app.services.document_service import get_document_service
 
 router = APIRouter()
 
@@ -302,13 +303,13 @@ def get_document_processing_status(
 
 
 @router.post("/{document_id}/reprocess")
-def reprocess_document(
+async def reprocess_document(
     document_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    문서 재처리
+    문서 재처리 (OpenAI 분석 포함)
     """
     document = db.query(Document).join(Project).filter(
         Document.id == document_id,
@@ -329,39 +330,19 @@ def reprocess_document(
         )
     
     try:
-        # 상태를 처리 중으로 변경
-        document.status = DocumentStatus.PROCESSING
-        document.error_message = None
+        # 문서 처리 서비스를 통해 재처리
+        document_service = get_document_service()
+        success = await document_service.reprocess_document(document, db)
         
-        db.commit()
-        
-        # 재처리 시작 (간단한 구현)
-        if document.file_path and os.path.exists(document.file_path):
-            try:
-                if document.filename.endswith('.txt'):
-                    with open(document.file_path, 'r', encoding='utf-8') as f:
-                        document.content = f.read()
-                    document.status = DocumentStatus.COMPLETED
-                else:
-                    # PDF 처리는 나중에 구현
-                    document.status = DocumentStatus.COMPLETED
-                    
-            except Exception as e:
-                document.status = DocumentStatus.FAILED
-                document.error_message = str(e)
+        if success:
+            return {"message": "문서 재처리가 성공적으로 완료되었습니다."}
         else:
-            document.status = DocumentStatus.FAILED
-            document.error_message = "파일을 찾을 수 없습니다"
-        
-        db.commit()
-        
-        return {"message": "문서 재처리가 완료되었습니다."}
-        
+            raise HTTPException(
+                status_code=500,
+                detail="문서 재처리 중 오류가 발생했습니다."
+            )
+            
     except Exception as e:
-        document.status = DocumentStatus.FAILED
-        document.error_message = str(e)
-        db.commit()
-        
         raise HTTPException(
             status_code=500,
             detail=f"문서 재처리 실패: {str(e)}"

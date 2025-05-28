@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     
     # OpenAI 설정
     OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-3.5-turbo"
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-ada-002"
+    OPENAI_MAX_TOKENS: int = 1000
+    OPENAI_TEMPERATURE: float = 0.1
     
     # CORS 설정
     ALLOWED_ORIGINS: list = ["http://localhost:3000", "http://127.0.0.1:3000"]

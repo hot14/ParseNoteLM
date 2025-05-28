@@ -14,6 +14,7 @@ from app.schemas.project import (
     ProjectCreate, ProjectResponse, ProjectUpdate, 
     ProjectListResponse, ProjectStatistics
 )
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -33,16 +34,16 @@ def create_project(
         Project.deleted_at.is_(None)
     ).count()
     
-    if current_project_count >= current_user.max_projects:
+    if current_project_count >= settings.MAX_PROJECTS_PER_USER:
         raise HTTPException(
             status_code=400,
-            detail=f"최대 {current_user.max_projects}개의 프로젝트만 생성할 수 있습니다."
+            detail=f"최대 {settings.MAX_PROJECTS_PER_USER}개의 프로젝트만 생성할 수 있습니다."
         )
     
     # 프로젝트명 중복 확인 (사용자별)
     existing_project = db.query(Project).filter(
         Project.user_id == current_user.id,
-        Project.name == project_data.name,
+        Project.title == project_data.title,
         Project.deleted_at.is_(None)
     ).first()
     
@@ -56,7 +57,7 @@ def create_project(
         # 프로젝트 생성
         project = Project(
             user_id=current_user.id,
-            name=project_data.name,
+            title=project_data.title,
             description=project_data.description
         )
         
@@ -147,10 +148,10 @@ def update_project(
         )
     
     # 프로젝트명 중복 확인 (자신 제외)
-    if update_data.name and update_data.name != project.name:
+    if update_data.title and update_data.title != project.title:
         existing_project = db.query(Project).filter(
             Project.user_id == current_user.id,
-            Project.name == update_data.name,
+            Project.title == update_data.title,
             Project.id != project_id,
             Project.deleted_at.is_(None)
         ).first()
@@ -292,7 +293,7 @@ def get_project_statistics(
         
         return ProjectStatistics(
             id=project.id,
-            name=project.name,
+            title=project.title,
             description=project.description,
             total_documents=documents_in_project,
             total_storage_mb=round(total_size_bytes / (1024 * 1024), 2),

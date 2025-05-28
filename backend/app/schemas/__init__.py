@@ -38,6 +38,16 @@ from .chat_history import (
     ChatExportRequest, ChatExportResponse
 )
 
+# OpenAI 스키마
+from .openai import (
+    DocumentAnalysisRequest, DocumentAnalysisResponse,
+    EmbeddingRequest, EmbeddingResponse,
+    BatchEmbeddingRequest, BatchEmbeddingResponse,
+    SummaryRequest, SummaryResponse,
+    QuestionAnswerRequest, QuestionAnswerResponse,
+    OpenAIUsageStats, APIErrorResponse
+)
+
 # 모든 스키마를 외부에서 사용할 수 있도록 export
 __all__ = [
     # User 스키마
@@ -65,4 +75,12 @@ __all__ = [
     "ChatSessionRequest", "ChatSessionResponse", "MessageFeedbackRequest",
     "MessageFeedbackResponse", "ChatHistoryListRequest", "ChatStatisticsResponse",
     "ChatExportRequest", "ChatExportResponse",
+    
+    # OpenAI 스키마
+    "DocumentAnalysisRequest", "DocumentAnalysisResponse",
+    "EmbeddingRequest", "EmbeddingResponse",
+    "BatchEmbeddingRequest", "BatchEmbeddingResponse",
+    "SummaryRequest", "SummaryResponse",
+    "QuestionAnswerRequest", "QuestionAnswerResponse",
+    "OpenAIUsageStats", "APIErrorResponse",
 ]
