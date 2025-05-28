@@ -1,0 +1,245 @@
+# ParseNoteLM - MVP PRD (Phase 1)
+
+## 프로젝트 개요
+
+### 제품명
+**ParseNoteLM** - AI 기반 문서 분석 및 질의응답 서비스 (MVP)
+
+### 제품 목표
+사용자가 업로드한 문서를 AI로 분석하고 자연어로 질의응답할 수 있는 기본 서비스 구현
+
+## MVP 목표
+
+### 핵심 목표
+1. **기본 기능 검증**: 문서 업로드 → AI 분석 → 질의응답 플로우 완성
+2. **사용자 피드백 수집**: 20명의 베타 테스터로부터 피드백 수집
+3. **기술 검증**: RAG 시스템의 한국어 문서 처리 성능 검증
+
+### 성공 지표
+- 문서 업로드 성공률 95% 이상
+- 질의응답 응답시간 5초 이내
+- 사용자 만족도 3.5/5.0 이상
+
+## 타겟 사용자
+
+### Primary: 대학생/대학원생
+- **니즈**: 논문과 자료를 쉽게 이해하고 질문하고 싶음
+- **사용 시나리오**: PDF 논문 업로드 → 핵심 내용 질문 → 답변 확인
+
+## MVP 핵심 기능 (Phase 1 Only)
+
+### 1. 사용자 관리
+- **회원가입/로그인**: 이메일 기반 간단 인증
+- **프로필 관리**: 기본 정보 (이름, 이메일)
+- **사용량 추적**: 프로젝트 개수, 문서 개수 제한 관리
+
+### 2. 프로젝트 관리
+- **프로젝트 생성**: 사용자가 프로젝트명만 입력하여 생성
+- **프로젝트 폴더**: 하나의 프로젝트에 여러 문서 업로드 가능
+- **프로젝트 전환**: 프로젝트별 독립적인 질의응답 컨텍스트
+- **프로젝트 제한**: 사용자당 최대 3개 프로젝트, 프로젝트당 최대 5개 문서
+
+### 3. 문서 업로드 및 처리
+- **파일 형식**: PDF, TXT만 지원
+- **파일 크기**: 최대 10MB
+- **언어**: 한국어, 영어
+- **처리**: 텍스트 추출 및 청킹
+
+### 4. AI 기반 문서 분석
+- **텍스트 추출**: PDF 텍스트 추출 (OCR 제외)
+- **문서 요약**: 간단한 1-2문단 요약
+- **벡터 임베딩**: 문서를 벡터로 변환하여 저장
+
+### 5. 질의응답 시스템 (RAG)
+- **자연어 질문**: 한국어/영어 질문 처리
+- **컨텍스트 기반 답변**: 업로드된 문서 기반으로만 답변
+- **기본 출처 표시**: 어느 문서에서 답변했는지 표시
+- **프로젝트 기반 질의**: 현재 선택된 프로젝트 내 문서들만 대상으로 검색
+
+### 6. 기본 UI
+- **문서 업로드**: 간단한 드래그 앤 드롭
+- **질의응답 인터페이스**: 채팅 형태의 질문/답변
+- **문서 목록**: 업로드한 문서들 목록 보기
+- **프로젝트 사이드바**: 프로젝트 목록 및 전환
+
+## 📊 MVP 제한사항
+
+### 사용자 제한
+- **무료 사용자**: 
+  - 프로젝트 3개
+  - 프로젝트당 문서 5개
+  - 문서당 최대 10MB
+  - 일일 질문 50개
+
+### 기능 제한
+- **파일 형식**: PDF, TXT만 (DOCX, HWP 제외)
+- **파일 크기**: 10MB (기존 50MB에서 축소)
+- **동시 처리**: 1개 파일씩만 업로드 처리
+- **저장 방식**: 로컬 파일 시스템 (클라우드 스토리지 제외)
+- **AI 모델**: OpenAI GPT-3.5-turbo만 사용
+- **언어**: 한국어, 영어만 지원
+
+### UI/UX 제한
+- **반응형**: 데스크톱 우선, 모바일은 기본 지원만
+- **테마**: 라이트 모드만 지원
+- **브라우저**: Chrome, Safari, Firefox 최신 버전만
+
+## 기술 요구사항
+
+### 최소 기술 스택
+```
+Frontend: React + TypeScript + Tailwind CSS
+Backend: FastAPI + Python
+Database: PostgreSQL + pgvector
+AI: OpenAI API (GPT-4 + text-embedding-3-small)
+Storage: 로컬 파일 시스템 (AWS S3 제외)
+```
+
+### 성능 요구사항
+- **동시 사용자**: 10명
+- **문서 처리 시간**: 5MB 문서 기준 30초 이내
+- **API 응답시간**: 평균 3초 이내
+
+## 🗄️ 데이터베이스 스키마
+
+### 기본 테이블 구조
+
+```sql
+-- 사용자 테이블
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 프로젝트 테이블
+CREATE TABLE projects (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, name)
+);
+
+-- 문서 테이블
+CREATE TABLE documents (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    filename VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_size INTEGER NOT NULL,
+    file_type VARCHAR(10) NOT NULL,
+    content TEXT,
+    summary TEXT,
+    processed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 임베딩 테이블 (벡터 저장)
+CREATE TABLE embeddings (
+    id SERIAL PRIMARY KEY,
+    document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+    chunk_text TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    embedding vector(1536),  -- OpenAI embedding 차원
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 질의응답 기록 테이블
+CREATE TABLE chat_history (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    source_documents TEXT[], -- 참조된 문서 ID들
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## MVP 비즈니스 모델
+
+### 무료 서비스
+- 모든 기능 무료 제공
+- 사용자당 문서 5개까지
+- 질의응답 100회/일
+
+### 목적
+- 기능 검증 및 사용자 피드백 수집
+- 기술적 문제점 파악 및 해결
+
+## 개발 일정 (6주)
+
+### Week 1-2: 백엔드 기반 구축
+- FastAPI 프로젝트 셋업
+- PostgreSQL + pgvector 설정
+- 기본 인증 시스템 (간단한 JWT)
+- 문서 업로드 API
+
+### Week 3-4: RAG 시스템 구현
+- OpenAI API 연동
+- 문서 텍스트 추출 (PyPDF2)
+- 벡터 임베딩 및 저장
+- 질의응답 엔진 구현
+
+### Week 5-6: 프론트엔드 및 통합
+- React 기본 UI 구현
+- 문서 업로드 인터페이스
+- 질의응답 채팅 UI
+- API 연동 및 테스트
+
+## 테스트 계획
+
+### 기능 테스트
+- [ ] PDF 파일 업로드 및 텍스트 추출
+- [ ] 문서 요약 생성
+- [ ] 한국어 질의응답 정확도
+- [ ] 영어 질의응답 정확도
+- [ ] 출처 표시 기능
+
+### 사용자 테스트
+- **대상**: 대학생 5명, 대학원생 5명
+- **기간**: 1주
+- **수집**: 사용성, 답변 품질, 개선점
+
+## MVP 성공 기준
+
+### 기술적 성공
+- [ ] 문서 업로드 성공률 95%
+- [ ] 질의응답 응답시간 5초 이내
+- [ ] 한국어 답변 정확도 70% 이상
+
+### 사용자 만족
+- [ ] 사용자 만족도 3.5/5.0 이상
+- [ ] "다시 사용하고 싶다" 80% 이상
+- [ ] 명확한 개선점 피드백 수집
+
+## MVP에서 제외되는 기능
+
+- 멀티미디어 지원 (이미지, 오디오, 비디오)
+- 협업 기능 (공유, 댓글)
+- 고급 노트 기능
+- 플래시카드, 퀴즈 생성
+- 모바일 앱
+- 구독 결제 시스템
+- 고급 분석 및 인사이트
+- 소셜 로그인
+
+## MVP 이후 계획
+
+### Phase 2 준비사항
+MVP 피드백을 바탕으로:
+1. 사용자가 가장 원하는 기능 우선순위 결정
+2. 기술적 개선점 파악
+3. 비즈니스 모델 검증
+4. 투자 또는 수익화 전략 수립
+
+---
+
+**MVP 버전**: v1.0  
+**목표 완료일**: 6주 후  
+**작성일**: 2025-05-28
