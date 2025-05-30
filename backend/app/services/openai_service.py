@@ -3,11 +3,16 @@ OpenAI API 통합 서비스
 """
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, NamedTuple
 from openai import AsyncOpenAI
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+class OpenAIChatResponse(NamedTuple):
+    """OpenAI 채팅 응답 타입"""
+    message: str
+    tokens_used: int
 
 class OpenAIService:
     """OpenAI API 서비스 클래스"""
@@ -271,6 +276,41 @@ class OpenAIService:
         except Exception as e:
             logger.error(f"RAG 답변 생성 실패: {str(e)}")
             raise Exception(f"답변 생성 중 오류가 발생했습니다: {str(e)}")
+    
+    async def generate_chat_response(self, prompt: str) -> OpenAIChatResponse:
+        """
+        채팅 응답 생성 (RAG용)
+        
+        Args:
+            prompt: 사용자 프롬프트 (컨텍스트 포함)
+            
+        Returns:
+            ChatResponse 객체 (message, tokens_used)
+        """
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.chat_model,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=1500,
+                temperature=0.7,
+                timeout=self.timeout
+            )
+            
+            message = response.choices[0].message.content.strip()
+            tokens_used = response.usage.total_tokens if response.usage else 0
+            
+            logger.info(f"채팅 응답 생성 완료. 토큰 사용량: {tokens_used}")
+            
+            return OpenAIChatResponse(
+                message=message,
+                tokens_used=tokens_used
+            )
+            
+        except Exception as e:
+            logger.error(f"채팅 응답 생성 실패: {str(e)}")
+            raise Exception(f"채팅 응답 생성 중 오류가 발생했습니다: {str(e)}")
 
 # 전역 OpenAI 서비스 인스턴스
 _openai_service: Optional[OpenAIService] = None

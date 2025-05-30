@@ -834,7 +834,7 @@
       "id": 10,
       "title": "사용량 추적 및 제한 구현",
       "description": "무료 사용자를 위한 사용량 제한을 추적하고 시행하는 시스템을 개발합니다.",
-      "status": "pending",
+      "status": "in-progress",
       "dependencies": [
         2,
         3,

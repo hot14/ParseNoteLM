@@ -140,17 +140,32 @@ async def rag_chat(
         answer_response = await openai_service.generate_chat_response(rag_prompt)
         
         # 5. 채팅 기록 저장
-        chat_history = ChatHistory(
-            user_id=current_user.id,
+        from app.models.chat_history import MessageRole, MessageType
+        
+        # 사용자 메시지 저장
+        user_chat = ChatHistory(
             project_id=project_id,
-            message=request.message,
-            response=answer_response.message,
-            model_used="gpt-3.5-turbo",
-            tokens_used=answer_response.tokens_used,
-            context_chunks=len(search_results),
-            sources=sources
+            role=MessageRole.USER,
+            message_type=MessageType.QUERY,
+            content=request.message,
+            total_tokens=0
         )
-        db.add(chat_history)
+        db.add(user_chat)
+        db.flush()  # ID 생성을 위해 flush
+        
+        # AI 응답 저장
+        assistant_chat = ChatHistory(
+            project_id=project_id,
+            role=MessageRole.ASSISTANT,
+            message_type=MessageType.ANSWER,
+            content=answer_response.message,
+            model_used="gpt-3.5-turbo",
+            total_tokens=answer_response.tokens_used,
+            context_documents=sources,
+            context_used=len(search_results) > 0,
+            parent_message_id=user_chat.id
+        )
+        db.add(assistant_chat)
         db.commit()
         
         logger.info(f"RAG 답변 생성 완료 - 사용자: {current_user.id}, 프로젝트: {project_id}")

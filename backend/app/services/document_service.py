@@ -56,17 +56,25 @@ class DocumentProcessingService:
             document.difficulty = analysis_result.get("difficulty", "중급")
             
             # 텍스트 청킹 및 임베딩 생성
+            logger.info(f"📝 텍스트 청킹 시작: document_id={document.id}")
             chunks = self._split_text_into_chunks(content)
+            logger.info(f"📊 청킹 완료: {len(chunks)}개 청크 생성")
+            
+            logger.info(f"🎯 임베딩 생성 시작: document_id={document.id}")
             embeddings_created = await self._create_embeddings(document, chunks, db)
+            logger.info(f"🎯 임베딩 생성 완료: success={embeddings_created}")
             
             if embeddings_created:
                 document.status = "COMPLETED"
-                logger.info(f"문서 처리 완료: {document.id}")
+                logger.info(f"✅ 문서 처리 완료: {document.id}")
             else:
                 document.status = "FAILED"
-                logger.error(f"임베딩 생성 실패: {document.id}")
+                logger.error(f"❌ 임베딩 생성 실패: {document.id}")
             
+            logger.info(f"💾 최종 상태 커밋 시작: document_id={document.id}, status={document.status}")
             db.commit()
+            logger.info(f"💾 최종 상태 커밋 완료: document_id={document.id}")
+            
             return embeddings_created
             
         except Exception as e:
@@ -170,37 +178,54 @@ class DocumentProcessingService:
             임베딩 생성 성공 여부
         """
         try:
+            logger.info(f"🎯 임베딩 생성 시작: document_id={document.id}, chunks={len(chunks)}")
+            
             if not chunks:
-                logger.warning(f"생성할 청크가 없습니다: {document.id}")
+                logger.warning(f"⚠️ 생성할 청크가 없습니다: {document.id}")
                 return True
             
-            # 기존 임베딩 삭제
-            db.query(Embedding).filter(Embedding.document_id == document.id).delete()
+            # 기존 임베딩 삭제 (reprocess에서 이미 했지만 안전을 위해)
+            existing_count = db.query(Embedding).filter(Embedding.document_id == document.id).count()
+            if existing_count > 0:
+                logger.info(f"🗑️ 기존 임베딩 추가 삭제: {existing_count}개")
+                db.query(Embedding).filter(Embedding.document_id == document.id).delete()
             
             # 배치로 임베딩 생성
+            logger.info(f"🚀 OpenAI 임베딩 생성 호출: document_id={document.id}")
             embeddings = await self.openai_service.generate_embeddings_batch(chunks)
+            logger.info(f"📦 OpenAI 임베딩 응답 받음: {len(embeddings)}개")
             
             if len(embeddings) != len(chunks):
-                logger.error(f"임베딩 수와 청크 수가 일치하지 않습니다: {len(embeddings)} vs {len(chunks)}")
+                logger.error(f"❌ 임베딩 수와 청크 수가 일치하지 않습니다: {len(embeddings)} vs {len(chunks)}")
                 return False
             
             # 임베딩 저장
+            logger.info(f"💾 임베딩 객체 생성 및 DB 저장 시작: document_id={document.id}")
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 embedding_obj = Embedding(
                     document_id=document.id,
                     chunk_text=chunk,
                     chunk_index=i,
-                    embedding_vector=embedding
+                    chunk_size=len(chunk),  # chunk_size 설정
+                    embedding_vector=embedding,
+                    tokens=len(chunk.split()) if chunk else 0  # 토큰 수 설정
                 )
                 db.add(embedding_obj)
+                if i % 10 == 0:  # 10개마다 로그
+                    logger.debug(f"📝 임베딩 객체 추가: {i+1}/{len(chunks)}")
             
+            logger.info(f"💾 임베딩 커밋 시작: document_id={document.id}")
             db.commit()
-            logger.info(f"임베딩 생성 완료: {document.id} - {len(embeddings)}개")
+            logger.info(f"✅ 임베딩 생성 완료: {document.id} - {len(embeddings)}개")
             return True
             
         except Exception as e:
-            logger.error(f"임베딩 생성 실패: {document.id} - {str(e)}")
-            db.rollback()
+            logger.error(f"💥 임베딩 생성 실패: {document.id} - {str(e)}", exc_info=True)
+            try:
+                db.rollback()
+                logger.info(f"🔄 DB 롤백 완료: document_id={document.id}")
+            except Exception as rollback_error:
+                logger.error(f"💥 DB 롤백 실패: {rollback_error}")
             return False
     
     async def reprocess_document(self, document: Document, db: Session) -> bool:
@@ -214,14 +239,30 @@ class DocumentProcessingService:
         Returns:
             재처리 성공 여부
         """
-        logger.info(f"문서 재처리 시작: {document.id}")
-        
-        # 기존 임베딩 삭제
-        db.query(Embedding).filter(Embedding.document_id == document.id).delete()
-        db.commit()
-        
-        # 문서 다시 처리
-        return await self.process_document(document, db)
+        try:
+            logger.info(f"🔄 문서 재처리 시작: document_id={document.id}, filename={document.filename}")
+            
+            # 기존 임베딩 개수 확인
+            existing_embeddings = db.query(Embedding).filter(Embedding.document_id == document.id).count()
+            logger.info(f"🗑️ 삭제할 기존 임베딩 개수: {existing_embeddings}")
+            
+            # 기존 임베딩 삭제
+            deleted_count = db.query(Embedding).filter(Embedding.document_id == document.id).delete()
+            logger.info(f"✂️ 임베딩 삭제 완료: {deleted_count}개")
+            
+            db.commit()
+            logger.info(f"💾 임베딩 삭제 커밋 완료")
+            
+            # 문서 다시 처리
+            logger.info(f"🚀 문서 다시 처리 시작: document_id={document.id}")
+            result = await self.process_document(document, db)
+            logger.info(f"✅ 문서 재처리 완료: document_id={document.id}, success={result}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"💥 문서 재처리 중 예외 발생: document_id={document.id}, error={str(e)}", exc_info=True)
+            return False
 
 # 전역 문서 처리 서비스 인스턴스
 _document_service: Optional[DocumentProcessingService] = None

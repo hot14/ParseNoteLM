@@ -15,6 +15,9 @@ from app.schemas.project import (
     ProjectListResponse, ProjectStatistics
 )
 from app.core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -28,32 +31,36 @@ def create_project(
     """
     새 프로젝트 생성
     """
-    # 사용자 프로젝트 수 제한 확인
-    current_project_count = db.query(Project).filter(
-        Project.user_id == current_user.id,
-        Project.deleted_at.is_(None)
-    ).count()
-    
-    if current_project_count >= settings.MAX_PROJECTS_PER_USER:
-        raise HTTPException(
-            status_code=400,
-            detail=f"최대 {settings.MAX_PROJECTS_PER_USER}개의 프로젝트만 생성할 수 있습니다."
-        )
-    
-    # 프로젝트명 중복 확인 (사용자별)
-    existing_project = db.query(Project).filter(
-        Project.user_id == current_user.id,
-        Project.title == project_data.title,
-        Project.deleted_at.is_(None)
-    ).first()
-    
-    if existing_project:
-        raise HTTPException(
-            status_code=400,
-            detail="이미 같은 이름의 프로젝트가 존재합니다."
-        )
+    logger.info(f"사용자 {current_user.username}이 프로젝트 생성을 시도합니다: {project_data.title}")
     
     try:
+        # 사용자 프로젝트 수 제한 확인
+        current_project_count = db.query(Project).filter(
+            Project.user_id == current_user.id,
+            Project.deleted_at.is_(None)
+        ).count()
+        
+        logger.info(f"현재 프로젝트 수: {current_project_count}")
+        
+        if current_project_count >= settings.MAX_PROJECTS_PER_USER:
+            raise HTTPException(
+                status_code=400,
+                detail=f"최대 {settings.MAX_PROJECTS_PER_USER}개의 프로젝트만 생성할 수 있습니다."
+            )
+        
+        # 프로젝트명 중복 확인 (사용자별)
+        existing_project = db.query(Project).filter(
+            Project.user_id == current_user.id,
+            Project.title == project_data.title,
+            Project.deleted_at.is_(None)
+        ).first()
+        
+        if existing_project:
+            raise HTTPException(
+                status_code=400,
+                detail="이미 같은 이름의 프로젝트가 존재합니다."
+            )
+        
         # 프로젝트 생성
         project = Project(
             user_id=current_user.id,
@@ -61,13 +68,18 @@ def create_project(
             description=project_data.description
         )
         
+        logger.info("프로젝트 객체 생성 완료, 데이터베이스에 저장 시도")
         db.add(project)
         db.commit()
         db.refresh(project)
         
+        logger.info(f"프로젝트 생성 성공: ID={project.id}")
         return ProjectResponse.model_validate(project)
         
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"프로젝트 생성 중 오류 발생: {str(e)}", exc_info=True)
         db.rollback()
         raise HTTPException(
             status_code=500,
