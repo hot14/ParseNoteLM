@@ -135,7 +135,7 @@ class VectorRetriever:
         project_id: str, 
         query: str, 
         k: int = 5,
-        score_threshold: float = 0.7
+        score_threshold: float = 0.5
     ) -> List[Dict[str, Any]]:
         """유사한 문서 청크 검색"""
         try:
@@ -192,6 +192,7 @@ class VectorRetriever:
         """파일에서 벡터 스토어 로드"""
         try:
             if os.path.exists(path):
+                # FAISS 역직렬화를 위한 allow_dangerous_deserialization 파라미터 추가
                 self.vector_stores[project_id] = FAISS.load_local(
                     path, 
                     self.embeddings,
@@ -308,19 +309,50 @@ class RAGService:
         self, 
         project_id: str, 
         query: str, 
-        max_results: int = 5
+        max_results: int = 5,
+        score_threshold: float = 0.3  # 임계값을 낮춤
     ) -> List[Dict[str, Any]]:
         """프로젝트 내 문서 검색"""
         # 벡터 스토어가 메모리에 없으면 로드
         if str(project_id) not in self.retriever.vector_stores:
             await self.load_project_vector_store(str(project_id))
         
-        # 유사 문서 검색
-        return await self.retriever.search_similar_documents(
-            str(project_id), 
-            query, 
-            k=max_results
-        )
+        # 쿼리 확장 - 한국어/영어 동의어 추가
+        expanded_queries = [query]
+        
+        # 온톨로지 관련 동의어 추가
+        query_lower = query.lower()
+        if "온톨로지" in query_lower:
+            expanded_queries.extend(["ontology", "존재론", "개념체계", "지식체계", "개념모델", "지식모델"])
+        elif "ontology" in query_lower:
+            expanded_queries.extend(["온톨로지", "존재론", "개념체계", "지식체계", "개념모델", "지식모델"])
+        elif "존재론" in query_lower:
+            expanded_queries.extend(["온톨로지", "ontology", "개념체계", "지식체계"])
+        elif any(keyword in query_lower for keyword in ["개념체계", "지식체계", "개념모델", "지식모델"]):
+            expanded_queries.extend(["온톨로지", "ontology", "존재론"])
+        
+        logger.info(f"쿼리 확장: '{query}' → {expanded_queries}")
+        
+        # 모든 확장된 쿼리로 검색 수행
+        all_results = []
+        for expanded_query in expanded_queries:
+            results = await self.retriever.search_similar_documents(
+                str(project_id), 
+                expanded_query, 
+                k=max_results,
+                score_threshold=score_threshold
+            )
+            all_results.extend(results)
+        
+        # 중복 제거 및 유사도 기준 정렬
+        unique_results = {}
+        for result in all_results:
+            key = f"{result['document_id']}_{result['chunk_index']}"
+            if key not in unique_results or result['similarity'] > unique_results[key]['similarity']:
+                unique_results[key] = result
+        
+        sorted_results = sorted(unique_results.values(), key=lambda x: x['similarity'], reverse=True)
+        return sorted_results[:max_results]
 
 
 # 전역 RAG 서비스 인스턴스

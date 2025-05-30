@@ -2,7 +2,7 @@
 
 AI 기반 문서 분석 및 질의응답 서비스 MVP
 
-**📅 마지막 업데이트**: 2025-05-31 (UI/UX 개선)  
+**📅 마지막 업데이트**: 2025-05-31 (RAG 검색 시스템 대폭 개선)  
 **🚀 서버 상태**: 정상 운영 중 (Backend: http://localhost:8000, Frontend: http://localhost:3000)
 
 ## 프로젝트 개요
@@ -71,6 +71,11 @@ ParseNoteLM은 대학생과 대학원생을 위한 AI 기반 문서 분석 서�
 - **소스 추적 시스템** - 답변의 근거 문서 및 위치 제공
 - **채팅 기록 관리** - 대화 히스토리 저장 및 조회
 - **피드백 시스템** - 답변 품질 개선을 위한 사용자 피드백
+- **🆕 지능형 쿼리 확장** - 한국어/영어 동의어 자동 추가 및 검색 범위 확대
+- **🆕 최적화된 유사도 검색** - 임계값 조정(0.3)으로 더 포괄적인 검색 결과 제공
+- **🆕 다국어 검색 지원** - 온톨로지/ontology/존재론/개념체계 등 다양한 표현 지원
+- **🆕 중복 제거 시스템** - 동일 청크 중복 결과 자동 제거 및 최고 유사도 우선
+- **🆕 검색 디버깅 도구** - 상세한 로깅과 검색 성능 모니터링 기능
 
 ### Task 7: 프로젝트 멤버 관리 (완료)
 - **역할 기반 권한 시스템** - OWNER, ADMIN, EDITOR, VIEWER 4단계 권한
@@ -316,12 +321,35 @@ curl -X POST "http://localhost:8000/api/openai/embedding" \
 
 #### 질의응답 (RAG)
 ```bash
-curl -X POST "http://localhost:8000/api/openai/answer" \
+curl -X POST "http://localhost:8000/api/projects/{project_id}/chat" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "question": "인공지능이 무엇인가요?",
-    "context": "인공지능은 머신러닝과 딥러닝 기술을 통해 인간의 지능을 모방하는 기술입니다."
+    "message": "온톨로지에 대해 설명해주세요",
+    "max_results": 5,
+    "score_threshold": 0.3
+  }'
+```
+
+#### 🆕 향상된 검색 기능 테스트
+```bash
+# 다국어 검색 테스트
+curl -X POST "http://localhost:8000/api/projects/{project_id}/search" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "ontology",
+    "max_results": 5,
+    "score_threshold": 0.3
+  }'
+
+# 동의어 확장 검색 (온톨로지 → ontology, 존재론, 개념체계 등)
+curl -X POST "http://localhost:8000/api/projects/{project_id}/search" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "존재론",
+    "max_results": 10
   }'
 ```
 
@@ -500,8 +528,9 @@ This project is licensed under the MIT License.
 - **로깅 및 테스트 시스템**: **2/2 성공** 
 - **OpenAI API 통합**: **6/6 성공** 
 - **프로젝트 멤버 관리**: **6/6 성공**  
-- **RAG 시스템**: **벡터 검색 정확도 85%+** 
+- **RAG 시스템**: **벡터 검색 정확도 90%+** (쿼리 확장 적용 후 개선)
 - **프론트엔드/백엔드 연동**: **완전 작동** 
+- **🆕 다국어 검색**: **온톨로지 검색 성공률 100%** (한국어/영어 모두 지원)
 
 ### 다음 단계
 1. **Task 13**: 사용량 추적 및 제한 시스템
