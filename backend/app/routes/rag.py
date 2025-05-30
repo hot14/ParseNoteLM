@@ -27,7 +27,7 @@ router = APIRouter(prefix="/api/rag", tags=["RAG"])
 
 @router.post("/projects/{project_id}/search")
 async def search_documents(
-    project_id: UUID,
+    project_id: int,
     query: str,
     max_results: int = 5,
     current_user: User = Depends(get_current_user),
@@ -75,7 +75,7 @@ async def search_documents(
 
 @router.post("/projects/{project_id}/chat", response_model=ChatResponse)
 async def rag_chat(
-    project_id: UUID,
+    project_id: int,
     request: ChatRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -215,7 +215,7 @@ async def reindex_document(
 
 @router.get("/projects/{project_id}/chat/history")
 async def get_chat_history(
-    project_id: UUID,
+    project_id: int,
     limit: int = 20,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

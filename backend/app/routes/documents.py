@@ -17,10 +17,11 @@ from app.schemas.document import (
 from app.schemas.project import ProjectResponse
 import os
 import pathlib
-from app.config import settings
+from app.core.config import settings
 from app.core.file_validation_simple import SimpleFileValidator
 from app.services.document_service import get_document_service
-from app.services.rag_service import get_rag_service, RAGService
+from app.services.rag_service import RAGService
+from uuid import UUID
 
 router = APIRouter()
 
@@ -36,7 +37,6 @@ def validate_uploaded_file(file: UploadFile, file_size: int) -> None:
 async def upload_document(
     project_id: int = Form(...),
     file: UploadFile = File(...),
-    description: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -70,19 +70,18 @@ async def upload_document(
         document = Document(
             filename=file.filename,
             original_filename=file.filename,
+            file_path="",  # 임시값, 나중에 업데이트
             project_id=project_id,
-            user_id=current_user.id,
             file_type=SimpleFileValidator.get_file_type(file.filename),
             file_size=file.size or 0,
-            description=description,
-            status=DocumentStatus.UPLOADING
+            processing_status=DocumentStatus.UPLOADING
         )
         
         db.add(document)
         db.flush()  # ID를 얻기 위해 flush
         
         # 파일 저장 (간단한 구현)
-        upload_dir = pathlib.Path(settings.UPLOAD_DIRECTORY)
+        upload_dir = pathlib.Path(settings.get_absolute_upload_dir)
         upload_dir.mkdir(exist_ok=True)
         
         # 사용자별/프로젝트별 디렉토리 생성
@@ -98,22 +97,46 @@ async def upload_document(
         # 문서 정보 업데이트
         document.file_path = str(file_path)
         document.file_size = len(content)
-        document.status = DocumentStatus.COMPLETED  # 일단 완료로 처리
         
-        # 간단한 텍스트 추출 (PDF는 나중에 구현)
+        # 텍스트 추출 및 내용 설정
+        extracted_content = ""
         if file.filename.endswith('.txt'):
             try:
-                document.content = content.decode('utf-8')
+                extracted_content = content.decode('utf-8')
             except:
-                document.content = content.decode('utf-8', errors='ignore')
+                extracted_content = content.decode('utf-8', errors='ignore')
+        elif file.filename.endswith('.pdf'):
+            try:
+                # PDF 텍스트 추출 (pdfplumber 사용)
+                import pdfplumber
+                import io
+                
+                with pdfplumber.open(io.BytesIO(content)) as pdf:
+                    text_content = ""
+                    for page in pdf.pages:
+                        page_text = page.extract_text()
+                        if page_text:
+                            text_content += page_text + "\n"
+                extracted_content = text_content
+                print(f"PDF 텍스트 추출 성공: {len(text_content)} 문자")
+            except Exception as e:
+                print(f"PDF 텍스트 추출 실패: {e}")
+                extracted_content = ""
+        
+        # 문서 처리 완료로 표시 (content_length도 자동으로 설정됨)
+        document.mark_completed(extracted_content, 0)  # chunk_count는 RAG 처리 후 업데이트
         
         db.commit()
         
         # RAG 시스템에 문서 추가 처리 (백그라운드에서)
         try:
             if document.content:  # 텍스트 내용이 있는 경우에만
-                rag_service = await get_rag_service()
-                await rag_service.process_document_for_rag(document.id, db)
+                rag_service = RAGService()
+                success = await rag_service.process_document_for_rag(document.id, db)
+                if success:
+                    print(f"RAG 처리 성공: document_id={document.id}")
+                else:
+                    print(f"RAG 처리 실패: document_id={document.id}")
         except Exception as e:
             # RAG 처리 실패는 문서 업로드 실패로 이어지지 않도록 로그만 남김
             print(f"RAG 처리 실패 (문서 업로드는 성공): {e}")
@@ -156,16 +179,20 @@ def get_documents(
         query = query.filter(Document.project_id == project_id)
     
     if status:
-        query = query.filter(Document.status == status)
+        query = query.filter(Document.processing_status == status)
     
     total = query.count()
     documents = query.order_by(Document.created_at.desc()).offset(skip).limit(limit).all()
+    
+    # 프로젝트의 문서 추가 가능 여부 확인
+    project_can_add_more = total < settings.MAX_DOCUMENTS_PER_PROJECT
     
     return DocumentListResponse(
         documents=[DocumentResponse.model_validate(doc) for doc in documents],
         total=total,
         skip=skip,
-        limit=limit
+        limit=limit,
+        project_can_add_more=project_can_add_more
     )
 
 
@@ -293,18 +320,18 @@ def get_document_processing_status(
     
     # 진행률 계산
     progress = 0
-    if document.status == DocumentStatus.UPLOADING:
+    if document.processing_status == DocumentStatus.UPLOADING:
         progress = 25
-    elif document.status == DocumentStatus.PROCESSING:
+    elif document.processing_status == DocumentStatus.PROCESSING:
         progress = 50
-    elif document.status == DocumentStatus.COMPLETED:
+    elif document.processing_status == DocumentStatus.COMPLETED:
         progress = 100
-    elif document.status == DocumentStatus.FAILED:
+    elif document.processing_status == DocumentStatus.FAILED:
         progress = 0
     
     return DocumentProcessingStatus(
         document_id=document.id,
-        status=document.status,
+        status=document.processing_status,
         progress=progress,
         error_message=document.error_message,
         created_at=document.created_at,
@@ -333,7 +360,7 @@ async def reprocess_document(
             detail="문서를 찾을 수 없습니다."
         )
     
-    if document.status == DocumentStatus.PROCESSING:
+    if document.processing_status == DocumentStatus.PROCESSING:
         raise HTTPException(
             status_code=400,
             detail="문서가 이미 처리 중입니다."

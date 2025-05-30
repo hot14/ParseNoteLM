@@ -5,54 +5,70 @@ import { apiClient } from './api';
 
 export interface ChatMessage {
   id?: number;
-  content: string;
-  sender: 'user' | 'assistant';
+  message: string;
+  response: string;
   timestamp: string;
-  project_id: number;
+  sources?: string[];
 }
 
 export interface ChatSession {
   id: number;
-  project_id: number;
+  name: string;
   created_at: string;
-  updated_at: string;
-  message_count: number;
+  messages_count: number;
 }
 
 export interface AskQuestionRequest {
   question: string;
   project_id: number;
+  document_id?: number;
   session_id?: number;
 }
 
 export interface AskQuestionResponse {
-  answer: string;
-  sources: Array<{
-    document_name: string;
-    page_number?: number;
-    relevance_score: number;
-    content_snippet: string;
-  }>;
+  message: string;
+  sources: string[];
+  tokens_used: number;
   session_id: number;
 }
 
 export const chatApi = {
   // 질문하기
   askQuestion: async (data: AskQuestionRequest): Promise<AskQuestionResponse> => {
-    const response = await apiClient.post('/api/chat/ask', data);
-    return response.data;
+    const response = await apiClient.post(`/api/rag/projects/${data.project_id}/chat`, {
+      message: data.question
+    });
+    return {
+      message: response.data.message,
+      sources: response.data.sources || [],
+      tokens_used: response.data.tokens_used || 0,
+      session_id: response.data.session_id || Date.now()
+    };
   },
 
-  // 채팅 세션 목록 조회
-  getChatSessions: async (projectId: number): Promise<ChatSession[]> => {
-    const response = await apiClient.get(`/api/projects/${projectId}/chat/sessions`);
-    return response.data;
+  // 채팅 히스토리 조회
+  getChatSessions: async (projectId: number): Promise<ChatMessage[]> => {
+    const response = await apiClient.get(`/api/rag/projects/${projectId}/chat/history`);
+    if (response.data.chats) {
+      return response.data.chats.map((chat: any) => ({
+        id: chat.id,
+        message: chat.message,
+        response: chat.response,
+        timestamp: chat.created_at,
+        sources: chat.sources || []
+      }));
+    }
+    return [];
   },
 
-  // 채팅 세션 생성
+  // 채팅 세션 생성 (더미 함수)
   createChatSession: async (projectId: number): Promise<ChatSession> => {
-    const response = await apiClient.post(`/api/projects/${projectId}/chat/sessions`);
-    return response.data;
+    return {
+      id: Date.now(),
+      name: "새 채팅",
+      created_at: new Date().toISOString(),
+      messages_count: 0
+    };
   },
 
   // 채팅 메시지 조회

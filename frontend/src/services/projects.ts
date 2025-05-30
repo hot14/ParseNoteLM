@@ -26,7 +26,7 @@ export const projectsApi = {
   // 프로젝트 목록 조회
   getProjects: async (): Promise<Project[]> => {
     const response = await apiClient.get('/api/projects/');
-    return response.data;
+    return response.data.projects; // projects 배열을 반환
   },
 
   // 프로젝트 상세 조회

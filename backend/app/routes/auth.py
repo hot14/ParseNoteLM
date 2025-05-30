@@ -1,35 +1,33 @@
 """
-인증 관련 라우터
+사용자 인증 관련 API 엔드포인트
 """
-from datetime import timedelta
+import logging
+from datetime import datetime, timedelta
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
+
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import (
-    create_access_token, 
-    verify_token, 
-    LoginRateLimiter,
-    create_password_reset_token,
-    verify_password_reset_token
+    create_access_token, get_password_hash, verify_password,
+    get_current_user, LoginRateLimiter
 )
-from app.core.config import settings
-from app.schemas.user import (
-    UserCreate, 
-    UserResponse, 
-    Token, 
-    UserLogin,
-    PasswordResetRequest,
-    PasswordResetConfirm,
-    MessageResponse
+from app.core.logging_config import (
+    log_api_request, log_api_response, log_user_action, 
+    log_database_operation, log_error_with_context
 )
-from app.services.user_service import UserService
 from app.models.user import User
+from app.schemas.user import UserCreate, UserResponse, UserLogin, Token, UserUpdate
+from app.utils.email import send_password_reset_email
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+security = HTTPBearer()
+logger = logging.getLogger(__name__)
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(token: str = Depends(security), db: Session = Depends(get_db)):
     """현재 사용자 가져오기"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,53 +45,209 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     return user
 
 @router.post("/register", response_model=UserResponse)
-async def register(user: UserCreate, db: Session = Depends(get_db)):
-    """사용자 등록"""
-    # 이메일 중복 확인
-    if UserService.is_email_taken(db, user.email):
-        raise HTTPException(
-            status_code=400,
-            detail="이미 등록된 이메일입니다"
-        )
+async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    """
+    사용자 등록
     
-    # 사용자명 중복 확인
-    if UserService.is_username_taken(db, user.username):
-        raise HTTPException(
-            status_code=400,
-            detail="이미 사용 중인 사용자명입니다"
-        )
+    Args:
+        user_data: 사용자 등록 정보 (이메일, 비밀번호, 사용자명)
+        db: 데이터베이스 세션
     
-    return UserService.create_user(db=db, user=user)
+    Returns:
+        UserResponse: 등록된 사용자 정보
+    
+    Raises:
+        HTTPException: 이메일이 이미 사용 중인 경우
+    """
+    start_time = datetime.now()
+    
+    # API 요청 로깅
+    log_api_request(
+        method="POST",
+        path="/auth/register",
+        body={"email": user_data.email, "username": user_data.username}
+    )
+    
+    try:
+        logger.info(f"🆕 사용자 등록 시도: {user_data.email}")
+        
+        # 이메일 중복 검사
+        logger.debug(f"🔍 이메일 중복 검사: {user_data.email}")
+        log_database_operation("SELECT", "users", details={"email": user_data.email})
+        
+        existing_user = db.query(User).filter(User.email == user_data.email).first()
+        if existing_user:
+            logger.warning(f"⚠️ 이미 존재하는 이메일: {user_data.email}")
+            raise HTTPException(
+                status_code=400,
+                detail="이미 등록된 이메일입니다"
+            )
+        
+        # 사용자 생성
+        logger.debug(f"🔐 비밀번호 해싱 진행: {user_data.email}")
+        hashed_password = get_password_hash(user_data.password)
+        
+        logger.debug(f"💾 새 사용자 데이터베이스 저장: {user_data.email}")
+        db_user = User(
+            email=user_data.email,
+            username=user_data.username,
+            hashed_password=hashed_password,
+            role="user",
+            is_active=True,
+            is_verified=False
+        )
+        
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        # 성공 로깅
+        response_time = (datetime.now() - start_time).total_seconds()
+        log_database_operation("INSERT", "users", record_id=db_user.id, duration=response_time)
+        log_user_action(db_user.id, "회원가입", {"email": user_data.email, "username": user_data.username})
+        
+        logger.info(f"✅ 사용자 등록 성공: {user_data.email} (ID: {db_user.id})")
+        log_api_response(200, response_time)
+        
+        return db_user
+        
+    except HTTPException:
+        response_time = (datetime.now() - start_time).total_seconds()
+        log_api_response(400, response_time, "이메일 중복")
+        raise
+    except Exception as e:
+        response_time = (datetime.now() - start_time).total_seconds()
+        log_error_with_context(
+            logger, 
+            e, 
+            context={
+                "operation": "user_registration",
+                "email": user_data.email,
+                "username": user_data.username
+            }
+        )
+        log_api_response(500, response_time, str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="사용자 등록 중 오류가 발생했습니다"
+        )
 
 @router.post("/login", response_model=Token)
 async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
-    """사용자 로그인"""
-    # 로그인 시도 제한 확인
-    if LoginRateLimiter.is_blocked(user_credentials.email):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="너무 많은 로그인 시도로 인해 계정이 일시적으로 잠겼습니다. 15분 후 다시 시도해주세요.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    """
+    사용자 로그인
     
-    user = UserService.authenticate_user(db, user_credentials.email, user_credentials.password)
-    if not user:
-        # 실패한 로그인 시도 기록
-        LoginRateLimiter.record_failed_attempt(user_credentials.email)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="이메일 또는 비밀번호가 올바르지 않습니다",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    Args:
+        user_credentials: 로그인 정보 (이메일, 비밀번호)
+        db: 데이터베이스 세션
     
-    # 성공한 로그인 시도 기록 초기화
-    LoginRateLimiter.clear_attempts(user_credentials.email)
+    Returns:
+        Token: JWT 액세스 토큰
     
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+    Raises:
+        HTTPException: 인증 실패, 계정 비활성화, 로그인 시도 제한 등
+    """
+    start_time = datetime.now()
+    
+    # API 요청 로깅
+    log_api_request(
+        method="POST",
+        path="/auth/login",
+        body={"email": user_credentials.email}
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    
+    try:
+        logger.info(f"🔐 로그인 시도: {user_credentials.email}")
+        
+        # 로그인 시도 제한 확인
+        logger.debug(f"🛡️ 로그인 시도 제한 확인: {user_credentials.email}")
+        if LoginRateLimiter.is_blocked(user_credentials.email):
+            logger.warning(f"🚫 로그인 시도 제한 적용: {user_credentials.email}")
+            response_time = (datetime.now() - start_time).total_seconds()
+            log_api_response(429, response_time, "로그인 시도 제한")
+            raise HTTPException(
+                status_code=429,
+                detail="너무 많은 로그인 시도로 인해 일시적으로 차단되었습니다"
+            )
+
+        # 사용자 조회
+        logger.debug(f"🔍 사용자 데이터베이스 조회: {user_credentials.email}")
+        log_database_operation("SELECT", "users", details={"email": user_credentials.email})
+        
+        user = db.query(User).filter(User.email == user_credentials.email).first()
+        if not user:
+            logger.warning(f"❌ 존재하지 않는 사용자: {user_credentials.email}")
+            LoginRateLimiter.record_failed_attempt(user_credentials.email)
+            response_time = (datetime.now() - start_time).total_seconds()
+            log_api_response(401, response_time, "존재하지 않는 사용자")
+            raise HTTPException(
+                status_code=401,
+                detail="이메일 또는 비밀번호가 올바르지 않습니다"
+            )
+
+        # 비밀번호 검증
+        logger.debug(f"🔑 비밀번호 검증: {user_credentials.email}")
+        if not verify_password(user_credentials.password, user.hashed_password):
+            logger.warning(f"❌ 비밀번호 불일치: {user_credentials.email}")
+            LoginRateLimiter.record_failed_attempt(user_credentials.email)
+            log_user_action(user.id, "로그인 실패", {"reason": "비밀번호 불일치"})
+            response_time = (datetime.now() - start_time).total_seconds()
+            log_api_response(401, response_time, "비밀번호 불일치")
+            raise HTTPException(
+                status_code=401,
+                detail="이메일 또는 비밀번호가 올바르지 않습니다"
+            )
+
+        # 계정 활성화 확인
+        if not user.is_active:
+            logger.warning(f"🚫 비활성화된 계정: {user_credentials.email}")
+            response_time = (datetime.now() - start_time).total_seconds()
+            log_api_response(401, response_time, "비활성화된 계정")
+            raise HTTPException(
+                status_code=401,
+                detail="비활성화된 계정입니다"
+            )
+        
+        # 성공시 제한 해제
+        logger.debug(f"🔓 로그인 시도 제한 해제: {user_credentials.email}")
+        LoginRateLimiter.clear_attempts(user_credentials.email)
+        
+        # JWT 토큰 생성
+        logger.debug(f"🎫 JWT 토큰 생성: {user_credentials.email}")
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email}, expires_delta=access_token_expires
+        )
+        
+        # 성공 로깅
+        response_time = (datetime.now() - start_time).total_seconds()
+        log_user_action(user.id, "로그인 성공", {
+            "ip": "unknown",  # FastAPI Request에서 가져올 수 있음
+            "user_agent": "unknown"  # FastAPI Request에서 가져올 수 있음
+        })
+        
+        logger.info(f"✅ 로그인 성공: {user_credentials.email} (ID: {user.id})")
+        log_api_response(200, response_time)
+        
+        return {"access_token": access_token, "token_type": "bearer"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        response_time = (datetime.now() - start_time).total_seconds()
+        log_error_with_context(
+            logger, 
+            e, 
+            context={
+                "operation": "user_login",
+                "email": user_credentials.email
+            }
+        )
+        log_api_response(500, response_time, str(e))
+        raise HTTPException(
+            status_code=500, 
+            detail="로그인 처리 중 오류가 발생했습니다"
+        )
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):

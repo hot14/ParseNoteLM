@@ -744,7 +744,7 @@
       "id": 9,
       "title": "프론트엔드에서 API 통합 구현",
       "description": "RESTful API 호출을 통해 React 프론트엔드와 FastAPI 백엔드를 연결합니다.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         8
       ],
@@ -758,7 +758,7 @@
           "description": "통합해야 할 모든 API 엔드포인트를 식별하고 목록화합니다.",
           "dependencies": [],
           "details": "각 API의 기능, URL, 필요한 매개변수, 예상 응답 형식을 포함합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 2,
@@ -768,7 +768,7 @@
             1
           ],
           "details": "axios 또는 fetch를 사용하여 HTTP 요청을 구현하고, 인증 토큰 처리를 포함합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 3,
@@ -778,7 +778,7 @@
             2
           ],
           "details": "JSON 파싱, 데이터 정규화, 필요한 경우 데이터 구조 변환을 수행합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 4,
@@ -789,7 +789,7 @@
             3
           ],
           "details": "네트워크 오류, API 오류 코드, 타임아웃 등 다양한 오류 시나리오를 처리합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 5,
@@ -800,7 +800,7 @@
             4
           ],
           "details": "Redux, MobX 또는 Context API를 사용하여 로딩, 성공, 오류 상태를 관리합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 6,
@@ -811,7 +811,7 @@
             5
           ],
           "details": "로컬 스토리지 또는 인메모리 캐시를 사용하여 반복적인 API 호출을 최소화합니다.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 7,
@@ -826,7 +826,7 @@
             6
           ],
           "details": "각 API 함수에 대한 단위 테스트 작성, 통합 프로세스 및 사용법에 대한 문서 작성",
-          "status": "pending"
+          "status": "done"
         }
       ]
     },

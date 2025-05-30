@@ -211,11 +211,12 @@ class RAGService:
     def __init__(self):
         self.chunker = DocumentChunker()
         self.retriever = VectorRetriever()
-        self.vector_store_base_path = "data/vector_stores"
+        from app.core.config import settings
+        self.vector_store_base_path = settings.get_absolute_vector_store_dir
     
     async def process_document_for_rag(
         self, 
-        document_id: UUID, 
+        document_id: int, 
         db: Session
     ) -> bool:
         """문서를 RAG 시스템에 추가 처리"""
@@ -258,16 +259,34 @@ class RAGService:
                 
                 # 임베딩 메타데이터 DB에 저장
                 for chunk in chunks:
+                    # 청크에 대한 임베딩 벡터 생성
+                    chunk_embedding = await self.retriever.embeddings.aembed_query(chunk["text"])
+                    
+                    # 디버깅을 위한 로그 추가
+                    chunk_text = chunk["text"]
+                    chunk_size_val = len(chunk_text)
+                    logger.info(f"청크 처리 중: chunk_size={chunk_size_val}, text_length={len(chunk_text)}")
+                    
                     embedding = Embedding(
                         document_id=document_id,
-                        chunk_text=chunk["text"],
+                        chunk_text=chunk_text,
+                        chunk_size=chunk_size_val,  # 청크 크기 (문자 수) 추가
                         chunk_index=chunk["chunk_index"],
-                        metadata_=chunk["metadata"]
+                        embedding_vector=chunk_embedding,  # 임베딩 벡터 추가
+                        embedding_model="text-embedding-ada-002",
+                        vector_dimension=len(chunk_embedding) if chunk_embedding else 1536,
+                        tokens=len(chunk_text.split()),  # 대략적인 토큰 수
+                        document_metadata=chunk["metadata"]  # metadata_ → document_metadata로 수정
                     )
                     db.add(embedding)
                 
                 db.commit()
-                logger.info(f"문서 RAG 처리 완료: {document_id}")
+                
+                # 문서의 chunk_count 업데이트
+                document.chunk_count = len(chunks)
+                db.commit()
+                
+                logger.info(f"문서 RAG 처리 완료: {document_id}, chunks: {len(chunks)}")
                 return True
             
             return False

@@ -22,13 +22,13 @@ export interface UploadDocumentRequest {
 export const documentsApi = {
   // 프로젝트의 문서 목록 조회
   getDocuments: async (projectId: number): Promise<Document[]> => {
-    const response = await apiClient.get(`/api/projects/${projectId}/documents/`);
+    const response = await apiClient.get(`/api/documents/?project_id=${projectId}`);
     return response.data;
   },
 
   // 문서 상세 조회
   getDocument: async (projectId: number, documentId: number): Promise<Document> => {
-    const response = await apiClient.get(`/api/projects/${projectId}/documents/${documentId}`);
+    const response = await apiClient.get(`/api/documents/${documentId}`);
     return response.data;
   },
 
@@ -36,9 +36,10 @@ export const documentsApi = {
   uploadDocument: async (projectId: number, file: File): Promise<Document> => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('project_id', projectId.toString());
 
     const response = await apiClient.post(
-      `/api/projects/${projectId}/documents/`,
+      `/api/documents/upload`,
       formData,
       {
         headers: {
@@ -51,13 +52,13 @@ export const documentsApi = {
 
   // 문서 삭제
   deleteDocument: async (projectId: number, documentId: number): Promise<void> => {
-    await apiClient.delete(`/api/projects/${projectId}/documents/${documentId}`);
+    await apiClient.delete(`/api/documents/${documentId}`);
   },
 
   // 문서 다운로드
   downloadDocument: async (projectId: number, documentId: number): Promise<Blob> => {
     const response = await apiClient.get(
-      `/api/projects/${projectId}/documents/${documentId}/download`,
+      `/api/documents/${documentId}/download`,
       {
         responseType: 'blob',
       }
@@ -72,8 +73,13 @@ export const documentsApi = {
     chunks_count?: number;
   }> => {
     const response = await apiClient.get(
-      `/api/projects/${projectId}/documents/${documentId}/status`
+      `/api/documents/${documentId}/status`
     );
     return response.data;
+  },
+
+  // 문서 재처리
+  reprocessDocument: async (projectId: number, documentId: number): Promise<void> => {
+    await apiClient.post(`/api/documents/${documentId}/reprocess`);
   },
 };

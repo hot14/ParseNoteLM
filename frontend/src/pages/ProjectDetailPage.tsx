@@ -11,13 +11,7 @@ interface ProjectDetail extends Project {
   document_count?: number;
 }
 
-// 파일 업로드 응답 타입
-interface UploadResponse {
-  document_id: number;
-  filename: string;
-  summary: string;
-  content_preview: string;
-}
+// 파일 업로드 응답 타입은 Document 타입을 직접 사용
 
 export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -131,23 +125,22 @@ export const ProjectDetailPage: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await documentsApi.uploadDocument(Number(projectId), formData);
-      const uploadResponse: UploadResponse = response.data;
+      const uploadResponse: Document = await documentsApi.uploadDocument(Number(projectId), file);
       
       const newDocument: Document = {
-        id: uploadResponse.document_id,
-        name: uploadResponse.filename,
-        content_type: file.type,
-        size: file.size,
-        upload_date: new Date().toISOString(),
-        project_id: Number(projectId),
-        file_path: `/uploads/${uploadResponse.filename}`,
-        processed: false
+        id: uploadResponse.id,
+        name: uploadResponse.name,
+        content_type: uploadResponse.content_type,
+        size: uploadResponse.size,
+        upload_date: uploadResponse.upload_date,
+        project_id: uploadResponse.project_id,
+        file_path: uploadResponse.file_path,
+        processed: uploadResponse.processed
       };
       
       setDocuments(prev => [...prev, newDocument]);
       setSelectedDocument(newDocument);
-      setDocumentSummary(uploadResponse.summary);
+      setDocumentSummary('문서가 업로드되었습니다. 처리를 위해 "문서 처리" 버튼을 클릭하세요.');
     } catch (error) {
       console.error('파일 업로드 실패:', error);
     } finally {
@@ -161,11 +154,13 @@ export const ProjectDetailPage: React.FC = () => {
     setIsProcessing(true);
     
     try {
-      const response = await documentsApi.processDocument(selectedDocument.id);
-      const processedDocument: Document = response.data;
+      await documentsApi.processDocument(selectedDocument.id);
       
-      setDocuments(prev => prev.map(document => document.id === processedDocument.id ? processedDocument : document));
-      setSelectedDocument(processedDocument);
+      // 문서 재처리 후 업데이트된 정보를 가져오기
+      const updatedDocument = await documentsApi.getDocument(selectedDocument.project_id, selectedDocument.id);
+      
+      setDocuments(prev => prev.map(document => document.id === updatedDocument.id ? updatedDocument : document));
+      setSelectedDocument(updatedDocument);
     } catch (error) {
       console.error('문서 처리 실패:', error);
     } finally {
