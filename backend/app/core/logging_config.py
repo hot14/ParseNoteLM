@@ -69,6 +69,11 @@ def setup_logging(
         file_handler.setFormatter(DetailedFormatter())
         root_logger.addHandler(file_handler)
     
+    # 특정 로거들의 레벨 조정 (노이즈 감소)
+    logging.getLogger("multipart.multipart").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    
     # 애플리케이션 시작 로그
     logger = logging.getLogger(__name__)
     logger.info(f"🚀 {app_name} 로깅 시스템 초기화 완료")

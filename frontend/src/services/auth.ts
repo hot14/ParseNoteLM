@@ -40,14 +40,15 @@ class AuthService {
   /**
    * 사용자 로그인
    */
-  async login(data: LoginData): Promise<AuthResponse> {
-    const response = await apiClient.post('/auth/login', data);
-    const { access_token, token_type } = response.data;
+  async login(data: LoginData): Promise<void> {
+    const response = await apiClient.post<AuthResponse>('/auth/login', data);
+    const { access_token } = response.data;
     
     // 토큰을 로컬 스토리지에 저장
-    localStorage.setItem('access_token', access_token);
+    localStorage.setItem('token', access_token);
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
     
-    return response.data;
+    return;
   }
 
   /**
@@ -62,14 +63,14 @@ class AuthService {
    * 로그아웃
    */
   logout(): void {
-    localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
   }
 
   /**
    * 토큰 존재 여부 확인
    */
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('access_token');
+    return !!localStorage.getItem('token');
   }
 }
 

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { projectsApi, Project } from '../services/projects';
 import { documentsApi, Document } from '../services/documents';
 import { chatApi, ChatMessage, AskQuestionRequest } from '../services/chat';
+import { getErrorMessage, handleSpecialErrors, logError } from '../utils/errorHandler';
 
 // 프로젝트 상세 페이지에서 사용할 확장된 프로젝트 타입
 interface ProjectDetail extends Project {
@@ -35,8 +36,14 @@ export const ProjectDetailPage: React.FC = () => {
     try {
       const projectData = await projectsApi.getProject(Number(projectId));
       setProject(projectData as ProjectDetail);
-    } catch (error) {
-      console.error('프로젝트 로드 실패:', error);
+    } catch (projectError) {
+      logError(projectError, 'loadProject');
+      
+      if (!handleSpecialErrors(projectError)) {
+        console.error('프로젝트 로드 실패:', projectError);
+      }
+    } finally {
+      setIsLoading(false);
     }
   }, [projectId]);
 
@@ -45,14 +52,18 @@ export const ProjectDetailPage: React.FC = () => {
     
     try {
       const documentsData = await documentsApi.getDocuments(Number(projectId));
-      console.log('📄 실제 문서 데이터:', documentsData);
-      console.log('📄 문서 개수:', documentsData.length);
-      if (documentsData.length > 0) {
-        console.log('📄 첫 번째 문서의 processing_status:', documentsData[0].processing_status);
+      setDocuments(documentsData || []);
+      
+      if (documentsData && documentsData.length > 0) {
+        setSelectedDocument(documentsData[0]);
       }
-      setDocuments(documentsData);
-    } catch (error) {
-      console.error('문서 로드 실패:', error);
+    } catch (documentsError) {
+      logError(documentsError, 'loadDocuments');
+      
+      if (!handleSpecialErrors(documentsError)) {
+        console.error('문서 로드 실패:', documentsError);
+      }
+      
       const mockDocument: Document = {
         id: 0,
         filename: "sample.pdf",
@@ -68,6 +79,7 @@ export const ProjectDetailPage: React.FC = () => {
         updated_at: new Date().toISOString()
       };
       setDocuments([mockDocument]);
+      setSelectedDocument(mockDocument);
     }
   }, [projectId]);
 
@@ -108,14 +120,20 @@ export const ProjectDetailPage: React.FC = () => {
       };
       
       setChatMessages(prev => [...(prev || []), assistantMessage]);
-    } catch (error) {
-      console.error('질문 처리 실패:', error);
+    } catch (chatError) {
+      logError(chatError, 'handleSendMessage');
+      
+      if (!handleSpecialErrors(chatError)) {
+        console.error('질문 처리 실패:', chatError);
+      }
+      
       const errorMessage: ChatMessage = {
         id: Date.now() + 2,
         message: '',
-        response: '죄송합니다. 현재 서비스를 이용할 수 없습니다.',
+        response: 'AI 응답 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
         timestamp: new Date().toISOString()
       };
+      
       setChatMessages(prev => [...(prev || []), errorMessage]);
     } finally {
       setIsAsking(false);
@@ -125,13 +143,34 @@ export const ProjectDetailPage: React.FC = () => {
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
     
+    const file = event.target.files[0];
+    
+    // 파일 크기 검증 (10MB 제한)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert('파일 크기는 10MB를 초과할 수 없습니다.');
+      event.target.value = ''; // 파일 입력 초기화
+      return;
+    }
+    
+    // 파일 타입 검증
+    const allowedTypes = [
+      'application/pdf',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/markdown'
+    ];
+    
+    if (!allowedTypes.includes(file.type) && !file.name.endsWith('.md') && !file.name.endsWith('.txt')) {
+      alert('지원되는 파일 형식: PDF, Word, 텍스트, 마크다운 파일만 업로드 가능합니다.');
+      event.target.value = ''; // 파일 입력 초기화
+      return;
+    }
+    
     setIsUploading(true);
     
     try {
-      const file = event.target.files[0];
-      const formData = new FormData();
-      formData.append('file', file);
-      
       const uploadResponse: Document = await documentsApi.uploadDocument(Number(projectId), file);
       
       const newDocument: Document = {
@@ -152,61 +191,49 @@ export const ProjectDetailPage: React.FC = () => {
       setDocuments(prev => Array.isArray(prev) ? [...prev, newDocument] : [newDocument]);
       setSelectedDocument(newDocument);
       setDocumentSummary('문서가 업로드되었습니다. 처리를 위해 "문서 처리" 버튼을 클릭하세요.');
-    } catch (error) {
-      console.error('파일 업로드 실패:', error);
+    } catch (uploadError) {
+      const uploadErrorMessage = getErrorMessage(uploadError);
+      logError(uploadError, 'handleFileChange');
+      
+      if (!handleSpecialErrors(uploadError)) {
+        console.error('파일 업로드 실패:', uploadError);
+      }
+      
+      alert(uploadErrorMessage || '파일 업로드에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsUploading(false);
+      event.target.value = ''; // 파일 입력 초기화
     }
   };
 
   const handleProcessDocument = async () => {
-    console.log('🔄 handleProcessDocument 함수 호출됨');
-    console.log('📄 선택된 문서:', selectedDocument);
-    console.log('⏳ 처리 중 상태:', isProcessing);
-    
-    if (!selectedDocument || isProcessing) {
-      console.log('❌ 조건 불충족으로 함수 종료');
-      return;
-    }
+    if (!selectedDocument || isProcessing) return;
     
     setIsProcessing(true);
-    console.log('✅ 처리 시작 - isProcessing을 true로 설정');
     
     try {
-      console.log('🌐 API 호출 시작 - reprocessDocument');
-      console.log('📊 요청 파라미터:', {
-        projectId: selectedDocument.project_id,
-        documentId: selectedDocument.id
-      });
-      
-      const result = await documentsApi.reprocessDocument(selectedDocument.project_id, selectedDocument.id);
-      console.log('✅ reprocessDocument API 응답:', result);
+      await documentsApi.reprocessDocument(selectedDocument.project_id, selectedDocument.id);
       
       // 문서 재처리 후 업데이트된 정보를 가져오기
-      console.log('🔄 업데이트된 문서 정보 가져오기 시작');
       const updatedDocument = await documentsApi.getDocument(selectedDocument.project_id, selectedDocument.id);
-      console.log('📄 업데이트된 문서:', updatedDocument);
       
       setDocuments(prev => (prev || []).map(document => document.id === updatedDocument.id ? updatedDocument : document));
       setSelectedDocument(updatedDocument);
       
       // 문서 요약 내용 설정 (실제로는 API에서 가져와야 하지만 임시로)
       setDocumentSummary(`이 문서(${updatedDocument.filename})가 성공적으로 처리되었습니다.\n\n주요 내용:\n- 파일 크기: ${updatedDocument.file_size_mb} MB\n- 처리 상태: ${updatedDocument.processing_status}\n- 청크 수: ${updatedDocument.chunk_count}\n\n문서 처리가 완료되어 AI 질의응답이 가능합니다.`);
+    } catch (processError) {
+      const processErrorMessage = getErrorMessage(processError);
+      logError(processError, 'handleProcessDocument');
       
-      console.log('✅ 문서 재처리 완료');
-    } catch (error) {
-      console.error('❌ 문서 처리 실패:', error);
-      console.error('❌ 에러 상세:', {
-        message: error instanceof Error ? error.message : '알 수 없는 오류',
-        stack: error instanceof Error ? error.stack : undefined,
-        response: error && typeof error === 'object' && 'response' in error ? error.response : undefined
-      });
+      if (!handleSpecialErrors(processError)) {
+        console.error('문서 처리 실패:', processError);
+      }
       
       // 에러 발생 시에도 임시 요약 내용 설정
-      setDocumentSummary(`문서 처리 중 오류가 발생했습니다.\n\n오류 내용: ${error instanceof Error ? error.message : '알 수 없는 오류'}\n\n다시 시도해주세요.`);
+      setDocumentSummary(`문서 처리 중 오류가 발생했습니다.\n\n오류 내용: ${processErrorMessage}\n\n다시 시도해주세요.`);
     } finally {
       setIsProcessing(false);
-      console.log('🏁 처리 완료 - isProcessing을 false로 설정');
     }
   };
 
@@ -226,6 +253,7 @@ export const ProjectDetailPage: React.FC = () => {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate('/dashboard')}
+              aria-label="ParseNoteLM으로 돌아가기"
               className="text-gray-600 hover:text-gray-900"
             >
               ← ParseNoteLM
@@ -237,6 +265,7 @@ export const ProjectDetailPage: React.FC = () => {
             <span className="text-gray-700">안녕하세요, {project?.user_id}님!</span>
             <button
               onClick={() => navigate('/login')}
+              aria-label="로그아웃"
               className="text-gray-600 hover:text-gray-900"
             >
               로그아웃
@@ -257,6 +286,7 @@ export const ProjectDetailPage: React.FC = () => {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
+                aria-label={isUploading ? "파일 업로드 중" : "새 파일 추가"}
                 className="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
               >
                 {isUploading ? (
@@ -325,6 +355,7 @@ export const ProjectDetailPage: React.FC = () => {
                   <button
                     onClick={handleProcessDocument}
                     disabled={isProcessing || !selectedDocument}
+                    aria-label={isProcessing ? "문서 처리 중" : selectedDocument?.processing_status === "completed" ? "문서 재처리하기" : "문서 처리하기"}
                     className="bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     {isProcessing ? '처리 중...' : 
@@ -389,6 +420,7 @@ export const ProjectDetailPage: React.FC = () => {
                   value={currentQuestion}
                   onChange={(e) => setCurrentQuestion(e.target.value)}
                   placeholder="예: 이 논문의 핵심 기술은?"
+                  aria-label="질문 입력란"
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
                   rows={3}
                   disabled={documents.length === 0}
@@ -397,6 +429,7 @@ export const ProjectDetailPage: React.FC = () => {
                 <button
                   onClick={handleSendMessage}
                   disabled={!currentQuestion.trim() || documents.length === 0 || isAsking}
+                  aria-label={isAsking ? "질문 전송 중" : "질문 전송"}
                   className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   {isAsking ? '답변 생성 중...' : '질문하기'}

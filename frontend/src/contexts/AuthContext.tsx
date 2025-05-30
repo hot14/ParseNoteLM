@@ -28,8 +28,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const loadUser = async () => {
       if (authService.isAuthenticated()) {
         try {
-          const userData = await authService.getCurrentUser();
-          setUser(userData);
+          const response = await authService.getCurrentUser();
+          setUser(response);
         } catch (error) {
           // 토큰이 유효하지 않은 경우
           authService.logout();
@@ -44,8 +44,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (data: LoginData) => {
     try {
       await authService.login(data);
-      const userData = await authService.getCurrentUser();
-      setUser(userData);
+      const response = await authService.getCurrentUser();
+      setUser(response);
     } catch (error) {
       throw error;
     }
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (data: RegisterData) => {
     try {
-      const userData = await authService.register(data);
+      await authService.register(data);
       // 회원가입 후 자동 로그인
       await login({ email: data.email, password: data.password });
     } catch (error) {

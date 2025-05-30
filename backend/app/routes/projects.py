@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.db.session import get_db
 from app.core.auth import get_current_user
+from app.core.exceptions import ProjectNotFoundException
 from app.models.user import User
 from app.models.project import Project
 from app.models.document import Document
@@ -133,10 +134,7 @@ def get_project(
     ).first()
     
     if not project:
-        raise HTTPException(
-            status_code=404,
-            detail="프로젝트를 찾을 수 없습니다."
-        )
+        raise ProjectNotFoundException
     
     return ProjectResponse.model_validate(project)
 
@@ -158,10 +156,7 @@ def update_project(
     ).first()
     
     if not project:
-        raise HTTPException(
-            status_code=404,
-            detail="프로젝트를 찾을 수 없습니다."
-        )
+        raise ProjectNotFoundException
     
     # 프로젝트명 중복 확인 (자신 제외)
     if update_data.title and update_data.title != project.title:
@@ -212,10 +207,7 @@ def delete_project(
     ).first()
     
     if not project:
-        raise HTTPException(
-            status_code=404,
-            detail="프로젝트를 찾을 수 없습니다."
-        )
+        raise ProjectNotFoundException
     
     try:
         # 소프트 삭제
@@ -267,10 +259,7 @@ def get_project_statistics(
     ).first()
     
     if not project:
-        raise HTTPException(
-            status_code=404,
-            detail="프로젝트를 찾을 수 없습니다."
-        )
+        raise ProjectNotFoundException
     
     try:
         # 문서 통계

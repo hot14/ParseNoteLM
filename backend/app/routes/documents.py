@@ -27,6 +27,12 @@ from app.services.document_service import get_document_service
 from app.services.rag_service import RAGService
 from uuid import UUID
 import logging
+from app.core.exceptions import (
+    DocumentNotFoundException,
+    ProjectNotFoundException,
+    FileUploadException,
+    DocumentProcessingException
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +44,7 @@ def validate_uploaded_file(file: UploadFile, file_size: int) -> None:
     """간단한 파일 검증"""
     is_valid, error_msg = SimpleFileValidator.validate_file(file.filename, file_size)
     if not is_valid:
-        raise HTTPException(status_code=400, detail=error_msg)
+        raise FileUploadException(error_msg)
 
 
 @router.post("/upload", response_model=DocumentResponse)
@@ -63,9 +69,7 @@ async def upload_document(
     )
 
     if not project:
-        raise HTTPException(
-            status_code=404, detail="프로젝트를 찾을 수 없거나 접근 권한이 없습니다."
-        )
+        raise ProjectNotFoundException("프로젝트를 찾을 수 없거나 접근 권한이 없습니다.")
 
     # 현재 프로젝트의 문서 수 확인
     current_doc_count = (
@@ -166,9 +170,7 @@ async def upload_document(
             except:
                 pass
 
-        raise HTTPException(
-            status_code=500, detail=f"문서 업로드 중 오류가 발생했습니다: {str(e)}"
-        )
+        raise DocumentProcessingException(f"문서 업로드 중 오류가 발생했습니다: {str(e)}")
 
 
 @router.get("/", response_model=DocumentListResponse)
@@ -233,7 +235,7 @@ def get_document(
     )
 
     if not document:
-        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+        raise DocumentNotFoundException("문서를 찾을 수 없습니다.")
 
     return DocumentResponse.model_validate(document)
 
@@ -260,7 +262,7 @@ def update_document(
     )
 
     if not document:
-        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+        raise DocumentNotFoundException("문서를 찾을 수 없습니다.")
 
     # 업데이트 가능한 필드만 수정
     update_dict = update_data.model_dump(exclude_unset=True)
@@ -293,7 +295,7 @@ def delete_document(
     )
 
     if not document:
-        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+        raise DocumentNotFoundException("문서를 찾을 수 없습니다.")
 
     try:
         # 소프트 삭제 실행
@@ -313,7 +315,7 @@ def delete_document(
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"문서 삭제 실패: {str(e)}")
+        raise DocumentProcessingException(f"문서 삭제 실패: {str(e)}")
 
 
 @router.get("/{document_id}/status", response_model=DocumentProcessingStatus)
@@ -337,7 +339,7 @@ def get_document_processing_status(
     )
 
     if not document:
-        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+        raise DocumentNotFoundException("문서를 찾을 수 없습니다.")
 
     # 진행률 계산
     progress = 0
@@ -384,7 +386,7 @@ async def reprocess_document(
 
     if not document:
         logger.warning(f"❌ 문서를 찾을 수 없음: document_id={document_id}, user_id={current_user.id}")
-        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
+        raise DocumentNotFoundException("문서를 찾을 수 없습니다.")
 
     logger.info(f"📄 재처리할 문서 찾음: {document.filename}, 현재 상태: {document.processing_status}")
 
@@ -405,13 +407,11 @@ async def reprocess_document(
             return {"message": "문서 재처리가 성공적으로 완료되었습니다."}
         else:
             logger.error(f"❌ 문서 재처리 실패: document_id={document_id}")
-            raise HTTPException(
-                status_code=500, detail="문서 재처리 중 오류가 발생했습니다."
-            )
+            raise DocumentProcessingException("문서 재처리 중 오류가 발생했습니다.")
 
     except HTTPException:
         # HTTPException은 그대로 재발생
         raise
     except Exception as e:
         logger.error(f"💥 문서 재처리 예외 발생: document_id={document_id}, error={str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"문서 재처리 실패: {str(e)}")
+        raise DocumentProcessingException(f"문서 재처리 실패: {str(e)}")

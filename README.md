@@ -2,6 +2,9 @@
 
 AI 기반 문서 분석 및 질의응답 서비스 MVP
 
+**📅 마지막 업데이트**: 2025-05-31  
+**🚀 서버 상태**: 정상 운영 중 (Backend: http://localhost:8000, Frontend: http://localhost:3000)
+
 ## 프로젝트 개요
 
 ParseNoteLM은 대학생과 대학원생을 위한 AI 기반 문서 분석 서비스입니다. PDF, TXT 파일을 업로드하여 AI가 분석하고, RAG(Retrieval-Augmented Generation) 기술을 통해 문서 내용에 대한 질의응답을 제공합니다.
@@ -196,7 +199,7 @@ source venv/bin/activate
 
 # 개발 서버 실행
 export DATABASE_URL="sqlite:///./parsenotelm.db"
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 서버 접속:

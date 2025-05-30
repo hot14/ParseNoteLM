@@ -86,20 +86,14 @@ export const documentsApi = {
 
   // 문서 재처리
   reprocessDocument: async (projectId: number, documentId: number): Promise<void> => {
-    console.log('🚀 documentsApi.reprocessDocument 호출');
-    console.log('📊 파라미터:', { projectId, documentId });
-    console.log('🌐 요청 URL:', `/api/documents/${documentId}/reprocess`);
-    
     try {
       const response = await apiClient.post(`/api/documents/${documentId}/reprocess`);
-      console.log('✅ API 응답 성공:', response);
       return response.data;
     } catch (error: any) {
-      console.error('❌ API 요청 실패:', error);
-      console.error('❌ 에러 상세:', {
-        status: error?.response?.status,
-        data: error?.response?.data,
-        message: error?.message || '알 수 없는 오류'
+      console.error('문서 재처리 API 호출 실패:', error);
+      console.error('에러 상세:', {
+        message: error instanceof Error ? error.message : '알 수 없는 오류',
+        response: error && typeof error === 'object' && 'response' in error ? error.response : undefined
       });
       throw error;
     }
