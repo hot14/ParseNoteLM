@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { projectsApi, Project } from '../services/projects';
 import { documentsApi, Document } from '../services/documents';
 import { chatApi, ChatMessage, AskQuestionRequest } from '../services/chat';
 import { getErrorMessage, handleSpecialErrors, logError } from '../utils/errorHandler';
+import { useAuth } from '../contexts/AuthContext';
 
 // 프로젝트 상세 페이지에서 사용할 확장된 프로젝트 타입
 interface ProjectDetail extends Project {
@@ -12,10 +13,17 @@ interface ProjectDetail extends Project {
   document_count?: number;
 }
 
+// 탭 타입 정의
+type TabType = 'document' | 'notes' | 'summary';
+
 // 파일 업로드 응답 타입은 Document 타입을 직접 사용
 
 export const ProjectDetailPage: React.FC = () => {
+  console.log('🚀 ProjectDetailPage 렌더링 시작!');
+  
   const { projectId } = useParams<{ projectId: string }>();
+  console.log('📌 프로젝트 ID:', projectId);
+  
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -29,6 +37,10 @@ export const ProjectDetailPage: React.FC = () => {
   const [isAsking, setIsAsking] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('document'); // 탭 상태 추가
+  const [notes, setNotes] = useState<string>(''); // 노트 상태 추가
+
+  const { user, logout } = useAuth();
 
   const loadProject = useCallback(async () => {
     if (!projectId) return;
@@ -50,14 +62,26 @@ export const ProjectDetailPage: React.FC = () => {
   const loadDocuments = useCallback(async () => {
     if (!projectId) return;
     
+    console.log('🔍 문서 로딩 시작, projectId:', projectId);
+    
     try {
       const documentsData = await documentsApi.getDocuments(Number(projectId));
-      setDocuments(documentsData || []);
+      console.log('📄 로드된 문서 데이터:', documentsData);
       
-      if (documentsData && documentsData.length > 0) {
-        setSelectedDocument(documentsData[0]);
+      // API 응답 구조: {documents: Array, total: number, project_can_add_more: boolean}
+      const documents = documentsData.documents || [];
+      console.log('📄 추출된 문서 배열:', documents);
+      
+      setDocuments(documents);
+      
+      if (documents && documents.length > 0) {
+        setSelectedDocument(documents[0]);
+        console.log('✅ 선택된 문서:', documents[0]);
+      } else {
+        console.log('📭 문서가 없습니다');
       }
     } catch (documentsError) {
+      console.error('❌ 문서 로드 실패:', documentsError);
       logError(documentsError, 'loadDocuments');
       
       if (!handleSpecialErrors(documentsError)) {
@@ -80,6 +104,7 @@ export const ProjectDetailPage: React.FC = () => {
       };
       setDocuments([mockDocument]);
       setSelectedDocument(mockDocument);
+      console.log('🔧 목업 문서로 대체됨');
     }
   }, [projectId]);
 
@@ -100,7 +125,7 @@ export const ProjectDetailPage: React.FC = () => {
       timestamp: new Date().toISOString()
     };
     
-    setChatMessages(prev => [...(prev || []), userMessage]);
+    setChatMessages(prev => [userMessage, ...(prev || [])]);
     setCurrentQuestion('');
     setIsAsking(true);
     
@@ -112,14 +137,18 @@ export const ProjectDetailPage: React.FC = () => {
       
       const response = await chatApi.askQuestion(request);
       
-      const assistantMessage: ChatMessage = {
-        id: Date.now() + 1,
-        message: '',
-        response: response.message || '응답을 받을 수 없습니다.',
-        timestamp: new Date().toISOString()
-      };
-      
-      setChatMessages(prev => [...(prev || []), assistantMessage]);
+      // 질문 메시지를 찾아서 응답을 업데이트
+      setChatMessages(prev => {
+        const updated = [...(prev || [])];
+        const questionIndex = updated.findIndex(msg => msg.id === userMessage.id);
+        if (questionIndex !== -1) {
+          updated[questionIndex] = {
+            ...updated[questionIndex],
+            response: response.message || '응답을 받을 수 없습니다.'
+          };
+        }
+        return updated;
+      });
     } catch (chatError) {
       logError(chatError, 'handleSendMessage');
       
@@ -127,14 +156,18 @@ export const ProjectDetailPage: React.FC = () => {
         console.error('질문 처리 실패:', chatError);
       }
       
-      const errorMessage: ChatMessage = {
-        id: Date.now() + 2,
-        message: '',
-        response: 'AI 응답 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-        timestamp: new Date().toISOString()
-      };
-      
-      setChatMessages(prev => [...(prev || []), errorMessage]);
+      // 질문 메시지를 찾아서 에러 메시지를 업데이트
+      setChatMessages(prev => {
+        const updated = [...(prev || [])];
+        const questionIndex = updated.findIndex(msg => msg.id === userMessage.id);
+        if (questionIndex !== -1) {
+          updated[questionIndex] = {
+            ...updated[questionIndex],
+            response: 'AI 응답 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+          };
+        }
+        return updated;
+      });
     } finally {
       setIsAsking(false);
     }
@@ -262,9 +295,12 @@ export const ProjectDetailPage: React.FC = () => {
             <h1 className="text-xl font-semibold text-gray-900">{project?.title}</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-gray-700">안녕하세요, {project?.user_id}님!</span>
+            <span className="text-gray-700">안녕하세요, {user?.username}님!</span>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
               aria-label="로그아웃"
               className="text-gray-600 hover:text-gray-900"
             >
@@ -328,6 +364,23 @@ export const ProjectDetailPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* 선택된 문서인 경우 재처리 버튼 표시 */}
+                  {selectedDocument?.id === document.id && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // 문서 선택 이벤트 방지
+                          handleProcessDocument();
+                        }}
+                        disabled={isProcessing}
+                        className="w-full bg-green-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        {isProcessing ? '처리 중...' : 
+                         document.processing_status === "completed" ? '🔄 재처리' : '⚡ 처리하기'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )) : null}
             </div>
@@ -342,36 +395,103 @@ export const ProjectDetailPage: React.FC = () => {
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   {selectedDocument.filename}
                 </h2>
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  <pre className="whitespace-pre-wrap text-gray-700">
-                    문서: {selectedDocument.filename}
-                    파일명: {selectedDocument.filename}
-                    타입: {selectedDocument.file_type}
-                    크기: {selectedDocument.file_size_mb}
-                    생성일: {selectedDocument.created_at}
-                  </pre>
+                
+                {/* 탭 네비게이션 */}
+                <div className="border-b border-gray-200 mb-6">
+                  <nav className="-mb-px flex space-x-8">
+                    <button
+                      onClick={() => setActiveTab('document')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'document'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      📄 문서 보기
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('notes')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'notes'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      📝 노트
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('summary')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'summary'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      📊 요약
+                    </button>
+                  </nav>
                 </div>
-                <div className="mt-4">
-                  <button
-                    onClick={handleProcessDocument}
-                    disabled={isProcessing || !selectedDocument}
-                    aria-label={isProcessing ? "문서 처리 중" : selectedDocument?.processing_status === "completed" ? "문서 재처리하기" : "문서 처리하기"}
-                    className="bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    {isProcessing ? '처리 중...' : 
-                     selectedDocument?.processing_status === "completed" ? '문서 재처리하기' : '문서 처리하기'}
-                  </button>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">요약 내용</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="whitespace-pre-wrap text-gray-700">{documentSummary}</p>
+
+                {/* 탭 내용 */}
+                {activeTab === 'document' && (
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div><span className="font-medium">파일명:</span> {selectedDocument.filename}</div>
+                      <div><span className="font-medium">타입:</span> {selectedDocument.file_type}</div>
+                      <div><span className="font-medium">크기:</span> {selectedDocument.file_size_mb} MB</div>
+                      <div><span className="font-medium">상태:</span> 
+                        <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                          selectedDocument.processing_status === 'completed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {selectedDocument.processing_status === 'completed' ? '처리 완료' : '처리 대기'}
+                        </span>
+                      </div>
+                      <div><span className="font-medium">청크 수:</span> {selectedDocument.chunk_count || '0'}</div>
+                      <div><span className="font-medium">생성일:</span> {new Date(selectedDocument.created_at).toLocaleString()}</div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {activeTab === 'notes' && (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2">📝 개인 노트</h3>
+                      <p className="text-xs text-gray-600 mb-3">이 문서에 대한 개인적인 메모나 생각을 적어보세요.</p>
+                    </div>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="예: 이 논문의 핵심 아이디어는..."
+                      className="w-full h-96 p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div className="flex justify-end">
+                      <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+                        💾 노트 저장
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'summary' && (
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 AI 요약 결과</h3>
+                    <div className="prose prose-sm max-w-none">
+                      <p className="whitespace-pre-wrap text-gray-700">
+                        {documentSummary || "문서를 처리하면 AI가 생성한 요약 내용이 여기에 표시됩니다."}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-20 text-gray-500">
-                왼쪽에서 문서를 선택하여 내용을 확인하세요.
+                <div className="mb-4">
+                  <span className="text-6xl">📄</span>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">문서를 선택해주세요</h3>
+                <p className="text-sm text-gray-500">왼쪽에서 문서를 선택하여 내용을 확인하고 노트를 작성하세요.</p>
               </div>
             )}
           </div>
@@ -386,29 +506,6 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
           
           <div className="p-4 space-y-6">
-            {/* 문서 정보 */}
-            {selectedDocument && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                  📄 문서 정보
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-gray-600">파일명:</span>
-                    <div className="text-gray-900">{selectedDocument.filename}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">크기:</span>
-                    <div className="text-gray-900">{selectedDocument.file_size_mb}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">업로드:</span>
-                    <div className="text-gray-900">{selectedDocument.created_at}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* AI 질문 섹션 */}
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
@@ -441,20 +538,20 @@ export const ProjectDetailPage: React.FC = () => {
             {chatMessages.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-900">채팅 기록</h3>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-3 max-h-[600px] overflow-y-auto">
                   {(chatMessages || [])
                     .filter(msg => (msg.message && msg.message.trim()) || (msg.response && msg.response.trim()))
                     .map((msg) => (
-                    <div key={msg.id || Math.random()}>
+                    <div key={msg.id || Math.random()} className="space-y-2">
                       {/* 사용자 메시지 */}
                       {msg.message && msg.message.trim() && (
-                        <div className="p-3 rounded-lg bg-blue-100 ml-4 mb-2">
+                        <div className="p-3 rounded-lg bg-blue-100 ml-4">
                           <div className="text-sm text-gray-900">{msg.message}</div>
                         </div>
                       )}
                       {/* AI 응답 */}
                       {msg.response && msg.response.trim() && (
-                        <div className="p-3 rounded-lg bg-gray-100 mr-4 mb-2">
+                        <div className="p-3 rounded-lg bg-gray-100 mr-4">
                           <div className="text-sm text-gray-900">{msg.response}</div>
                         </div>
                       )}

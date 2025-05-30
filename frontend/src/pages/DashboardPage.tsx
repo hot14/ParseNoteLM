@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { projectsApi, Project } from '../services/projects';
 import { Plus, FolderPlus } from 'lucide-react';
+import { getErrorMessage, handleSpecialErrors, logError } from '../utils/errorHandler';
 
 export const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
@@ -31,7 +32,8 @@ export const DashboardPage: React.FC = () => {
       });
       setProjectStats(mockStats);
     } catch (error) {
-      console.error('프로젝트 로드 실패:', error);
+      logError(error);
+      handleSpecialErrors(error);
       // 에러 발생 시 목 데이터 사용
       const mockProjects: Project[] = [
         {
@@ -65,26 +67,38 @@ export const DashboardPage: React.FC = () => {
     loadProjects();
   }, [loadProjects]);
 
-  const createProject = async () => {
-    if (!newProjectName.trim()) return;
+  // 프로젝트 생성
+  const createProject = useCallback(async () => {
+    if (!newProjectName.trim()) {
+      alert('프로젝트 이름을 입력해주세요.');
+      return;
+    }
     
     setLoading(true);
     try {
       const newProject = await projectsApi.createProject({
-        title: newProjectName,
-        description: newProjectDescription
+        title: newProjectName.trim(),
+        description: newProjectDescription.trim()
       });
       setProjects(prev => [...prev, newProject]);
       setShowNewProjectModal(false);
       setNewProjectName('');
       setNewProjectDescription('');
     } catch (error) {
-      console.error('프로젝트 생성 실패:', error);
-      alert('프로젝트 생성에 실패했습니다.');
+      logError(error, 'createProject');
+      if (!handleSpecialErrors(error)) {
+        alert(getErrorMessage(error) || '프로젝트 생성에 실패했습니다.');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [newProjectName, newProjectDescription]);
+
+  // 로그아웃 처리
+  const handleLogout = useCallback(() => {
+    logout();
+    navigate('/login');
+  }, [logout, navigate]);
 
   const selectProject = (project: Project) => {
     navigate(`/projects/${project.id}`);
@@ -106,7 +120,7 @@ export const DashboardPage: React.FC = () => {
                 안녕하세요, {user?.username}님!
               </span>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
               >
                 로그아웃

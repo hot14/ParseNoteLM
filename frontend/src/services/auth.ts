@@ -64,6 +64,8 @@ class AuthService {
    */
   logout(): void {
     localStorage.removeItem('token');
+    // Authorization 헤더도 제거
+    delete apiClient.defaults.headers.common['Authorization'];
   }
 
   /**

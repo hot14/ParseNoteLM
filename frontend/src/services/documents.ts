@@ -20,6 +20,13 @@ export interface Document {
   processing_error?: string;
 }
 
+// API 응답 타입 정의
+interface DocumentsResponse {
+  documents: Document[];
+  total: number;
+  project_can_add_more: boolean;
+}
+
 export interface UploadDocumentRequest {
   project_id: number;
   file: File;
@@ -27,7 +34,7 @@ export interface UploadDocumentRequest {
 
 export const documentsApi = {
   // 프로젝트의 문서 목록 조회
-  getDocuments: async (projectId: number): Promise<Document[]> => {
+  getDocuments: async (projectId: number): Promise<DocumentsResponse> => {
     const response = await apiClient.get(`/api/documents/?project_id=${projectId}`);
     return response.data;
   },

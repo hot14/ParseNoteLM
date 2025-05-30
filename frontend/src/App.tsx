@@ -15,6 +15,7 @@ function App() {
       <Router>
         <div className="App">
           <Routes>
+            <Route path="/login" element={<AuthPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
