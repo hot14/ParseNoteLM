@@ -236,8 +236,13 @@ cd frontend
 npm start
 ```
 
-서버 접속:
-- 프론트엔드: http://localhost:3000
+**서버 접속:**
+- 프론트엔드: http://localhost:3000 ✅
+
+#### 🖥️ 프론트엔드 사용자 인터페이스
+![프론트엔드 UI 스크린샷](docs/images/frontend_ui_screenshot-2025-05-31T23-09-03-501Z.png)
+
+*React 기반 모던 UI - 문서 업로드, AI 채팅, 프로젝트 관리 기능*
 
 ## API 사용 예제
 
