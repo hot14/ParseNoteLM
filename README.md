@@ -220,10 +220,15 @@ export DATABASE_URL="sqlite:///./parsenotelm.db"
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-서버 접속:
-- API 서버: http://localhost:8000
-- API 문서: http://localhost:8000/docs
-- OpenAPI 스펙: http://localhost:8000/redoc
+**서버 접속:**
+- API 서버: http://localhost:8000 ✅
+- API 문서: http://localhost:8000/docs ✅
+- OpenAPI 스펙: http://localhost:8000/redoc ✅
+
+#### 📖 API 문서 인터페이스
+![API 문서 스크린샷](docs/images/api_docs_screenshot-2025-05-31T23-04-36-396Z.png)
+
+*FastAPI 자동 생성 API 문서 - 모든 엔드포인트 테스트 가능*
 
 ### 프론트엔드 서버 시작
 ```bash
