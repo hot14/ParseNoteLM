@@ -192,17 +192,29 @@ class VectorRetriever:
         """파일에서 벡터 스토어 로드"""
         try:
             if os.path.exists(path):
-                # FAISS 역직렬화를 위한 allow_dangerous_deserialization 파라미터 추가
-                self.vector_stores[project_id] = FAISS.load_local(
-                    path, 
-                    self.embeddings,
-                    allow_dangerous_deserialization=True
-                )
+                # FAISS 버전 호환성을 위한 다중 시도 방식
+                try:
+                    # 최신 FAISS 버전에서 먼저 시도
+                    self.vector_stores[project_id] = FAISS.load_local(
+                        path, 
+                        self.embeddings,
+                        allow_dangerous_deserialization=True
+                    )
+                except TypeError:
+                    # 구 버전 FAISS에서는 allow_dangerous_deserialization 파라미터 없이 시도
+                    logger.info("FAISS 구 버전 호환 모드로 벡터 스토어 로드를 시도합니다.")
+                    self.vector_stores[project_id] = FAISS.load_local(
+                        path, 
+                        self.embeddings
+                    )
+                
                 logger.info(f"벡터 스토어 로드 완료: {path}")
                 return True
             return False
         except Exception as e:
             logger.error(f"벡터 스토어 로드 실패: {e}")
+            logger.error(f"  📍 파일: {__file__}:{self.load_vector_store.__code__.co_firstlineno}")
+            logger.error(f"  🔧 함수: {self.load_vector_store.__name__}")
             return False
 
 
