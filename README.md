@@ -97,7 +97,7 @@ User (1) ──→ (N) Project (1) ──→ (N) Document (1) ──→ (N) Embe
 - **피드백 시스템** - 답변 품질 개선
 
 #### 📱 대시보드 질의응답 인터페이스
-![ParseNoteLM 대시보드 질의응답 화면](docs/images/project_detail_screen-2025-05-31T23-28-31-873Z.png)
+![ParseNoteLM 대시보드 질의응답 화면](https://raw.githubusercontent.com/jeromwolf/ParseNoteLM/main/docs/images/dashboard_main_screen-2025-05-31T23-27-31-969Z.png)
 
 **3컬럼 NotebookLM 스타일 레이아웃:**
 - **왼쪽 사이드바**: 프로젝트 문서 목록 및 처리 상태 관리
