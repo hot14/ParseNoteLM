@@ -311,6 +311,47 @@ class OpenAIService:
         except Exception as e:
             logger.error(f"채팅 응답 생성 실패: {str(e)}")
             raise Exception(f"채팅 응답 생성 중 오류가 발생했습니다: {str(e)}")
+    
+    async def generate_chat_completion(self, messages: List[Dict[str, str]], max_tokens: int = 1500, temperature: float = 0.3) -> Dict[str, Any]:
+        """
+        표준 OpenAI 채팅 완성 API 호출
+        
+        Args:
+            messages: 채팅 메시지 리스트 (role, content 포함)
+            max_tokens: 최대 토큰 수
+            temperature: 창의성 수준 (0.0~1.0)
+            
+        Returns:
+            OpenAI API 응답 딕셔너리
+        """
+        try:
+            logger.info(f"💬 OpenAI 채팅 완성 요청: {len(messages)}개 메시지, max_tokens={max_tokens}")
+            
+            response = await self.client.chat.completions.create(
+                model=self.chat_model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                timeout=self.timeout
+            )
+            
+            content = response.choices[0].message.content.strip()
+            tokens_used = response.usage.total_tokens if response.usage else 0
+            
+            logger.info(f"✅ 채팅 완성 성공: {tokens_used} 토큰 사용")
+            
+            return {
+                "content": content,
+                "usage": {
+                    "total_tokens": tokens_used,
+                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+                    "completion_tokens": response.usage.completion_tokens if response.usage else 0
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ 채팅 완성 실패: {str(e)}")
+            raise Exception(f"채팅 완성 중 오류가 발생했습니다: {str(e)}")
 
 # 전역 OpenAI 서비스 인스턴스
 _openai_service: Optional[OpenAIService] = None

@@ -1,10 +1,11 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { projectsApi, Project } from '../services/projects';
 import { documentsApi, Document } from '../services/documents';
 import { chatApi, ChatMessage, AskQuestionRequest } from '../services/chat';
 import { getErrorMessage, handleSpecialErrors, logError } from '../utils/errorHandler';
 import { useAuth } from '../contexts/AuthContext';
+import MindMap from '../components/MindMap';
 
 // 프로젝트 상세 페이지에서 사용할 확장된 프로젝트 타입
 interface ProjectDetail extends Project {
@@ -14,7 +15,7 @@ interface ProjectDetail extends Project {
 }
 
 // 탭 타입 정의
-type TabType = 'document' | 'notes' | 'summary';
+type TabType = 'document' | 'notes' | 'summary' | 'mindmap';
 
 // 파일 업로드 응답 타입은 Document 타입을 직접 사용
 
@@ -37,7 +38,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [isAsking, setIsAsking] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('document'); // 탭 상태 추가
+  const [activeTab, setActiveTab] = useState<TabType>('mindmap'); // 기본 탭을 마인드맵으로 변경
   const [notes, setNotes] = useState<string>(''); // 노트 상태 추가
 
   const { user, logout } = useAuth();
@@ -253,8 +254,9 @@ export const ProjectDetailPage: React.FC = () => {
       setDocuments(prev => (prev || []).map(document => document.id === updatedDocument.id ? updatedDocument : document));
       setSelectedDocument(updatedDocument);
       
-      // 문서 요약 내용 설정 (실제로는 API에서 가져와야 하지만 임시로)
-      setDocumentSummary(`이 문서(${updatedDocument.filename})가 성공적으로 처리되었습니다.\n\n주요 내용:\n- 파일 크기: ${updatedDocument.file_size_mb} MB\n- 처리 상태: ${updatedDocument.processing_status}\n- 청크 수: ${updatedDocument.chunk_count}\n\n문서 처리가 완료되어 AI 질의응답이 가능합니다.`);
+      // 실제 문서 요약 생성
+      await loadDocumentSummary(updatedDocument.id);
+      
     } catch (processError) {
       const processErrorMessage = getErrorMessage(processError);
       logError(processError, 'handleProcessDocument');
@@ -269,6 +271,39 @@ export const ProjectDetailPage: React.FC = () => {
       setIsProcessing(false);
     }
   };
+
+  // 문서 요약 로드 함수 추가
+  const loadDocumentSummary = useCallback(async (documentId?: number) => {
+    if (!projectId) return;
+    
+    try {
+      console.log('📄 문서 요약 생성 중...');
+      const summaryResponse = await documentsApi.generateSummary(Number(projectId), documentId);
+      
+      console.log('✅ 문서 요약 생성 완료:', summaryResponse);
+      setDocumentSummary(summaryResponse.summary);
+      
+    } catch (summaryError) {
+      const summaryErrorMessage = getErrorMessage(summaryError);
+      logError(summaryError, 'loadDocumentSummary');
+      
+      console.error('문서 요약 생성 실패:', summaryError);
+      
+      // 요약 생성 실패 시 기본 메시지 설정
+      if (documentId && selectedDocument) {
+        setDocumentSummary(`${selectedDocument.original_filename} 문서의 요약을 생성할 수 없습니다.\n\n오류: ${summaryErrorMessage}\n\n문서가 올바르게 처리되었는지 확인해주세요.`);
+      } else {
+        setDocumentSummary(`문서 요약을 생성할 수 없습니다.\n\n오류: ${summaryErrorMessage}`);
+      }
+    }
+  }, [projectId, selectedDocument]);
+
+  // 문서 선택 시 요약 자동 로드
+  useEffect(() => {
+    if (selectedDocument && selectedDocument.processing_status === 'completed') {
+      loadDocumentSummary(selectedDocument.id);
+    }
+  }, [selectedDocument, loadDocumentSummary]);
 
   if (isLoading) {
     return (
@@ -400,6 +435,16 @@ export const ProjectDetailPage: React.FC = () => {
                 <div className="border-b border-gray-200 mb-6">
                   <nav className="-mb-px flex space-x-8">
                     <button
+                      onClick={() => setActiveTab('mindmap')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'mindmap'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      🗺️ 마인드맵
+                    </button>
+                    <button
                       onClick={() => setActiveTab('document')}
                       className={`py-2 px-1 border-b-2 font-medium text-sm ${
                         activeTab === 'document'
@@ -433,6 +478,14 @@ export const ProjectDetailPage: React.FC = () => {
                 </div>
 
                 {/* 탭 내용 */}
+                {activeTab === 'mindmap' && (
+                  <div className="bg-gray-50 p-6 rounded-lg h-[48rem]">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">🗺️ 마인드맵</h3>
+                    <div className="h-[40rem]">
+                      <MindMap document={selectedDocument} summary={documentSummary} />
+                    </div>
+                  </div>
+                )}
                 {activeTab === 'document' && (
                   <div className="bg-gray-50 p-6 rounded-lg">
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -453,7 +506,6 @@ export const ProjectDetailPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-
                 {activeTab === 'notes' && (
                   <div className="space-y-4">
                     <div className="bg-blue-50 p-4 rounded-lg">
@@ -473,13 +525,30 @@ export const ProjectDetailPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-
                 {activeTab === 'summary' && (
                   <div className="bg-gray-50 p-6 rounded-lg">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 AI 요약 결과</h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">📊 AI 요약 결과</h3>
+                      {selectedDocument && (
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-600">
+                            현재 문서: <strong>{selectedDocument.original_filename}</strong>
+                          </span>
+                          <button
+                            onClick={() => loadDocumentSummary(selectedDocument.id)}
+                            className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                          >
+                            요약 재생성
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <div className="prose prose-sm max-w-none">
                       <p className="whitespace-pre-wrap text-gray-700">
-                        {documentSummary || "문서를 처리하면 AI가 생성한 요약 내용이 여기에 표시됩니다."}
+                        {selectedDocument 
+                          ? (documentSummary || `${selectedDocument.original_filename} 문서의 요약을 생성하려면 "요약 재생성" 버튼을 클릭하세요.`)
+                          : "먼저 왼쪽에서 문서를 선택해주세요."
+                        }
                       </p>
                     </div>
                   </div>

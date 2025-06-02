@@ -21,7 +21,7 @@
 5. 관리자 보고 기능 테스트
 
 # Subtasks:
-## 1. 데이터 수집 컴포넌트 설계 [pending]
+## 1. 데이터 수집 컴포넌트 설계 [in-progress]
 ### Dependencies: None
 ### Description: 사용량 데이터를 수집하고 전처리하는 컴포넌트 설계
 ### Details:

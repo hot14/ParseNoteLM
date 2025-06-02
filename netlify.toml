@@ -1,0 +1,22 @@
+[build]
+  base = "frontend/"
+  command = "npm run build"
+  publish = "frontend/build"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_VERSION = "9"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production.environment]
+  REACT_APP_API_URL = "https://parsenotelm-backend.herokuapp.com"
+
+[context.deploy-preview.environment]
+  REACT_APP_API_URL = "https://parsenotelm-backend-staging.herokuapp.com"
+
+[context.branch-deploy.environment]
+  REACT_APP_API_URL = "https://parsenotelm-backend-dev.herokuapp.com"

@@ -41,14 +41,30 @@ class AuthService {
    * 사용자 로그인
    */
   async login(data: LoginData): Promise<void> {
-    const response = await apiClient.post<AuthResponse>('/auth/login', data);
-    const { access_token } = response.data;
-    
-    // 토큰을 로컬 스토리지에 저장
-    localStorage.setItem('token', access_token);
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-    
-    return;
+    try {
+      console.log('🔐 로그인 시도:', { email: data.email, api_url: process.env.REACT_APP_API_URL || 'http://localhost:8000' });
+      
+      const response = await apiClient.post<AuthResponse>('/auth/login', data);
+      console.log('✅ 로그인 응답 성공:', response.status);
+      
+      const { access_token } = response.data;
+      console.log('🎟️ 토큰 받음:', access_token ? '토큰 존재' : '토큰 없음');
+      
+      // 토큰을 로컬 스토리지에 저장
+      localStorage.setItem('token', access_token);
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      
+      console.log('✅ 로그인 완료');
+      return;
+    } catch (error: any) {
+      console.error('❌ 로그인 실패:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url
+      });
+      throw error;
+    }
   }
 
   /**
