@@ -15,7 +15,7 @@ interface ProjectDetail extends Project {
 }
 
 // 탭 타입 정의
-type TabType = 'document' | 'notes' | 'summary' | 'mindmap';
+type TabType = 'document' | 'notes' | 'summary' | 'mindmap' | 'video';
 
 // 파일 업로드 응답 타입은 Document 타입을 직접 사용
 
@@ -40,6 +40,9 @@ export const ProjectDetailPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('mindmap'); // 기본 탭을 마인드맵으로 변경
   const [notes, setNotes] = useState<string>(''); // 노트 상태 추가
+  const [videoTranscript, setVideoTranscript] = useState<string>('');
+  const [videoSummary, setVideoSummary] = useState<string>('');
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
 
   const { user, logout } = useAuth();
 
@@ -272,6 +275,28 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
+  const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    const file = event.target.files[0];
+    setIsVideoUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const response = await fetch('/api/videos/summary', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      setVideoTranscript(data.transcript || '');
+      setVideoSummary(data.summary || '');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsVideoUploading(false);
+      event.target.value = '';
+    }
+  };
+
   // 문서 요약 로드 함수 추가
   const loadDocumentSummary = useCallback(async (documentId?: number) => {
     if (!projectId) return;
@@ -474,6 +499,16 @@ export const ProjectDetailPage: React.FC = () => {
                     >
                       📊 요약
                     </button>
+                    <button
+                      onClick={() => setActiveTab('video')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'video'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      🎥 영상 요약
+                    </button>
                   </nav>
                 </div>
 
@@ -551,6 +586,29 @@ export const ProjectDetailPage: React.FC = () => {
                         }
                       </p>
                     </div>
+                  </div>
+                )}
+                {activeTab === 'video' && (
+                  <div className="bg-gray-50 p-6 rounded-lg space-y-4">
+                    <div>
+                      <button
+                        onClick={() => document.getElementById('videoInput')?.click()}
+                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                        {isVideoUploading ? '업로드 중...' : '영상 업로드'}
+                      </button>
+                    </div>
+                    {videoSummary && (
+                      <div>
+                        <h3 className="font-semibold mb-2">요약</h3>
+                        <pre className="whitespace-pre-wrap text-sm">{videoSummary}</pre>
+                      </div>
+                    )}
+                    {videoTranscript && (
+                      <div>
+                        <h3 className="font-semibold mb-2">스크립트</h3>
+                        <pre className="whitespace-pre-wrap text-sm max-h-64 overflow-y-auto">{videoTranscript}</pre>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -637,6 +695,13 @@ export const ProjectDetailPage: React.FC = () => {
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
+      />
+      <input
+        type="file"
+        accept="video/*"
+        onChange={handleVideoUpload}
+        className="hidden"
+        id="videoInput"
       />
     </div>
   );
