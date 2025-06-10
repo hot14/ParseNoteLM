@@ -48,6 +48,9 @@ from .openai import (
     OpenAIUsageStats, APIErrorResponse
 )
 
+# Media 스키마
+from .media import YouTubeSummaryRequest, YouTubeSummaryResponse
+
 # 모든 스키마를 외부에서 사용할 수 있도록 export
 __all__ = [
     # User 스키마
@@ -83,4 +86,7 @@ __all__ = [
     "SummaryRequest", "SummaryResponse",
     "QuestionAnswerRequest", "QuestionAnswerResponse",
     "OpenAIUsageStats", "APIErrorResponse",
+
+    # Media 스키마
+    "YouTubeSummaryRequest", "YouTubeSummaryResponse",
 ]
