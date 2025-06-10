@@ -45,6 +45,12 @@ email-validator==2.0.0
 python-dotenv==1.0.0
 httpx==0.24.0
 
+# 동영상 처리 스크립트 의존성
+gdown==5.1.0
+whisper==1.1.10
+pytesseract==0.3.10
+Pillow==10.2.0
+
 # 개발/테스트 도구 (선택적)
 # pytest==7.3.1
 # pytest-asyncio==0.21.0

@@ -28,3 +28,9 @@ numpy==1.25.2
 
 # CORS
 fastapi-cors==0.0.6
+
+# 동영상 처리 스크립트 의존성
+gdown==5.1.0
+whisper==1.1.10
+pytesseract==0.3.10
+Pillow==10.2.0
