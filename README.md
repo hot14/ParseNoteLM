@@ -22,6 +22,7 @@ ParseNoteLM은 대학생과 대학원생을 위한 완전한 AI 기반 문서 �
 - 🔐 **완전한 인증 시스템** - JWT 기반 보안 인증 및 권한 관리
 - 💻 **모던 웹 인터페이스** - React 기반 사용자 친화적 UI
 - 📹 **영상 요약 스크립트** - Google Drive/로컬 영상에서 스크립트와 화면 텍스트 추출 후 요약
+- 📈 **시스템 모니터링** - Prometheus 기반 성능 지표 및 헬스 체크 제공
 
 ## 🛠 기술 스택
 
@@ -158,6 +159,12 @@ User (1) ──→ (N) Project (1) ──→ (N) Document (1) ──→ (N) Embe
 
 ### 미디어 요약 API
 - `POST /api/media/youtube/summary` - YouTube 영상 요약
+- `POST /api/video/upload` - Google Drive 링크 또는 파일을 업로드하여 영상 요약
+
+### 모니터링 API
+- `GET /api/monitoring/health` - 서비스 헬스 체크
+- `GET /api/monitoring/stats` - 성능 통계 조회
+- `GET /api/monitoring/metrics` - Prometheus 지표 노출
 
 ### 멤버 관리 API
 - `GET /api/projects/{id}/members` - 멤버 목록
