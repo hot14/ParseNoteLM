@@ -117,8 +117,13 @@ def main():
         },
         {
             "name": "인증 시스템",
-            "script": test_dir / "test_auth.py", 
+            "script": test_dir / "test_auth.py",
             "description": "사용자 등록, 로그인, JWT 토큰 검증"
+        },
+        {
+            "name": "비디오 요약 API",
+            "script": project_root / "backend/test_video.py",
+            "description": "영상 업로드 후 요약/스크립트 반환"
         }
     ]
     
