@@ -20,5 +20,10 @@ async def youtube_summary(
     transcript = await YouTubeService.get_transcript(request.url)
     if not transcript:
         raise HTTPException(status_code=400, detail="영상 트랜스크립트를 가져오지 못했습니다")
-    summary = await openai_service.generate_summary(transcript, max_length=request.max_length)
-    return YouTubeSummaryResponse(summary=summary, transcript_length=len(transcript))
+    try:
+        summary = await openai_service.generate_summary(transcript, max_length=request.max_length)
+        logger.info(f"Successfully generated summary for user {current_user.id}")
+        return YouTubeSummaryResponse(summary=summary, transcript_length=len(transcript))
+    except Exception as e:
+        logger.error(f"Failed to generate summary: {e}")
+        raise HTTPException(status_code=500, detail="요약 생성 중 오류가 발생했습니다")
