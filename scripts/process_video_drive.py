@@ -65,8 +65,11 @@ def extract_audio(video_path: str, audio_path: str) -> str:
 @timing
 def transcribe_audio(audio_path: str) -> str:
     """Whisper 모델로 오디오 전사"""
-    model = load_model("base")
-    result = model.transcribe(audio_path, language="ko")
+    try:
+        model = load_model("base")
+        result = model.transcribe(audio_path, language="ko")
+    except Exception as e:
+        raise RuntimeError(f"Transcription failed: {e}")
     return result.get("text", "")
 
 @timing
