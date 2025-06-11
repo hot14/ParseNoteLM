@@ -2,7 +2,8 @@
 """YouTube 요약 API 테스트"""
 import requests
 
-JWT_TOKEN = "your-jwt-token"
+import os
+JWT_TOKEN = os.getenv("JWT_TOKEN", "your-jwt-token")
 
 
 def test_youtube_summary():
