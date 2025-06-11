@@ -26,6 +26,9 @@ aiofiles==23.2.1
 pandas==2.1.4
 numpy==1.25.2
 
+# 미디어 처리
+youtube-transcript-api==1.0.3
+
 # CORS
 fastapi-cors==0.0.6
 

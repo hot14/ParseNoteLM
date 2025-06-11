@@ -1,6 +1,6 @@
 AI 기반 문서 분석 및 질의응답 서비스 - 완전한 MVP 시스템
 
-**📅 마지막 업데이트**: 2025-06-02 (마인드맵 기능 완료 및 알려진 문제 해결)  
+**📅 마지막 업데이트**: 2025-06-10 (YouTube 요약 API 추가)
 **🚀 시스템 상태**: 전체 기능 완료 및 정상 운영 중
 - **백엔드**: http://localhost:8000 ✅ 완료
 - **프론트엔드**: http://localhost:3000 ✅ 완료
@@ -16,6 +16,7 @@ ParseNoteLM은 대학생과 대학원생을 위한 완전한 AI 기반 문서 �
 - 🤖 **RAG 기반 질의응답** - 문서 컨텍스트 기반 정확한 답변 생성
 - 🗺️ **마인드맵 시각화** - 문서 내용을 직관적인 마인드맵으로 시각화
 - 📊 **문서 요약 기능** - AI 기반 자동 문서 요약 생성
+- 🎬 **YouTube 영상 요약** - 링크만 입력하면 영상 내용을 요약
 - 🎥 **영상 요약/스크립트 추출** - 업로드한 영상에서 자막을 추출하고 핵심 내용을 마크다운 형식으로 요약
 - 👥 **프로젝트 멤버 관리** - 팀 단위 문서 공유 및 협업
 - 🔐 **완전한 인증 시스템** - JWT 기반 보안 인증 및 권한 관리
@@ -154,6 +155,9 @@ User (1) ──→ (N) Project (1) ──→ (N) Document (1) ──→ (N) Embe
 - `POST /api/rag/projects/{id}/search` - 문서 검색
 - `POST /api/rag/projects/{id}/chat` - RAG 기반 질의응답
 - `GET /api/rag/projects/{id}/chat/history` - 채팅 기록
+
+### 미디어 요약 API
+- `POST /api/media/youtube/summary` - YouTube 영상 요약
 
 ### 멤버 관리 API
 - `GET /api/projects/{id}/members` - 멤버 목록
