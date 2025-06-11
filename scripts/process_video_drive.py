@@ -75,25 +75,42 @@ def transcribe_audio(audio_path: str) -> str:
 @timing
 def extract_frame_text(video_path: str, interval: int = 5) -> str:
     """프레임을 주기적으로 추출해 화면 텍스트 OCR"""
-    temp_dir = tempfile.mkdtemp()
-    frame_pattern = os.path.join(temp_dir, "frame_%04d.png")
-    # 매 interval 초마다 프레임 저장
-    cmd = [
-        "ffmpeg",
-        "-i",
-        video_path,
-        "-vf",
-        f"fps=1/{interval}",
-        frame_pattern,
-    ]
-    subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    import shutil
 
-    texts = []
-    for frame_file in sorted(Path(temp_dir).glob("frame_*.png")):
-        text = pytesseract.image_to_string(Image.open(frame_file), lang="kor+eng")
-        if text.strip():
-            texts.append(text.strip())
-    return "\n".join(texts)
+    temp_dir = tempfile.mkdtemp()
+    try:
+        frame_pattern = os.path.join(temp_dir, "frame_%04d.png")
+        # 매 interval 초마다 프레임 저장
+        cmd = [
+            "ffmpeg",
+            "-y",  # Overwrite output files without asking
+            "-i",
+            video_path,
+            "-vf",
+            f"fps=1/{interval}",
+            frame_pattern,
+        ]
+        try:
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Frame extraction failed: {e.stderr}")
+        except FileNotFoundError:
+            raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
+
+        texts = []
+        for frame_file in sorted(Path(temp_dir).glob("frame_*.png")):
+            try:
+                with Image.open(frame_file) as img:
+                    text = pytesseract.image_to_string(img, lang="kor+eng")
+                    if text.strip():
+                        texts.append(text.strip())
+            except Exception as e:
+                print(f"Warning: Failed to process frame {frame_file}: {e}")
+                continue
+        return "\n".join(texts)
+    finally:
+        # Clean up temporary directory
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 @timing
 def summarize_with_lilys(text: str) -> str:
