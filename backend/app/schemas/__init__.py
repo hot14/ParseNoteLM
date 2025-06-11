@@ -47,6 +47,7 @@ from .openai import (
     QuestionAnswerRequest, QuestionAnswerResponse,
     OpenAIUsageStats, APIErrorResponse
 )
+from .video import VideoSummaryResponse
 
 # 모든 스키마를 외부에서 사용할 수 있도록 export
 __all__ = [
@@ -83,4 +84,5 @@ __all__ = [
     "SummaryRequest", "SummaryResponse",
     "QuestionAnswerRequest", "QuestionAnswerResponse",
     "OpenAIUsageStats", "APIErrorResponse",
+    "VideoSummaryResponse",
 ]

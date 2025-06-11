@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import time
-from app.routes import auth, admin, documents, projects, openai_api, rag, project_members
+from app.routes import auth, admin, documents, projects, openai_api, rag, project_members, videos
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.logging_config import setup_logging, log_api_request, log_api_response
@@ -49,6 +49,7 @@ app.include_router(project_members.router, prefix="/api/projects", tags=["projec
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(openai_api.router, tags=["openai"])
 app.include_router(rag.router, tags=["rag"])
+app.include_router(videos.router, tags=["videos"])
 
 @app.get("/")
 async def root():
