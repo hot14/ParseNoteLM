@@ -28,6 +28,12 @@ numpy==1.25.2
 
 # CORS
 fastapi-cors==0.0.6
+# Video processing
+gdown==5.1.0
+moviepy==1.0.3
+opencv-python==4.8.0.76
+pytesseract==0.3.10
+openai-whisper==20230314
 SpeechRecognition==3.14.3
 moviepy==2.2.1
 
