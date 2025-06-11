@@ -47,6 +47,7 @@ from .openai import (
     QuestionAnswerRequest, QuestionAnswerResponse,
     OpenAIUsageStats, APIErrorResponse
 )
+from .video import VideoSummaryResponse
 
 # Media 스키마
 from .media import YouTubeSummaryRequest, YouTubeSummaryResponse
@@ -89,4 +90,5 @@ __all__ = [
 
     # Media 스키마
     "YouTubeSummaryRequest", "YouTubeSummaryResponse",
+    "VideoSummaryResponse",
 ]
