@@ -633,11 +633,14 @@ This project is licensed under the MIT License.
 ## 🎬 영상 요약 스크립트 사용법
 
 1. Google Drive 공유 링크 또는 로컬 비디오 경로를 준비합니다.
-2. 의존성 설치 후 다음 명령어로 실행합니다.
+2. 필요한 경우 발표 자료(PDF)나 별도 스크립트(txt)를 함께 준비합니다.
+3. 의존성 설치 후 다음 명령어로 실행합니다.
    ```bash
-   python scripts/video_summary.py <영상 경로 또는 구글 드라이브 링크>
+   python scripts/video_summary.py <영상 경로 또는 구글 드라이브 링크> \
+       --slides <슬라이드 PDF 경로> --script <텍스트 스크립트 경로>
    ```
-3. `downloads/summary.md` 파일로 요약 결과가 저장되며, 해당 파일 경로 링크를 공유할 수 있습니다.
+   슬라이드나 스크립트가 없으면 옵션을 생략하면 됩니다.
+4. `downloads/summary.md`에 요약, 전체 스크립트, OCR 추출 내용, 주요 캡처 이미지가 포함된 보고서가 생성됩니다.
 
 
 ## 📝 라이센스
