@@ -9,11 +9,16 @@ class YouTubeService:
     @staticmethod
     async def get_transcript(video_url: str) -> Optional[str]:
         """영상 URL에서 트랜스크립트를 가져온다"""
+import logging
+
+logger = logging.getLogger(__name__)
+
         def _fetch(video_id: str):
             try:
                 transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["ko", "en"])
                 return " ".join([x['text'] for x in transcript])
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to fetch transcript for video {video_id}: {e}")
                 return None
         video_id = YouTubeService.extract_video_id(video_url)
         if not video_id:
