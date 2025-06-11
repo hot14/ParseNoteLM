@@ -150,4 +150,5 @@ def main():
     print(f"✅ 결과 저장: {args.output}")
 
 if __name__ == "__main__":
-    main()
+    import sys
+    sys.exit(main())
